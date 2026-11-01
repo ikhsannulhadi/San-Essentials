@@ -121,14 +121,14 @@ base {
 java.toolchain.languageVersion = JavaLanguageVersion.of(gradle_java_version.toInteger())
 
 tasks.withType(JavaCompile).configureEach {
-    inputs.property('ppeTargetLoader', target_loader)
-    inputs.property('ppeTargetMinecraftVersion', target_minecraft_version)
+    inputs.property('sanTargetLoader', target_loader)
+    inputs.property('sanTargetMinecraftVersion', target_minecraft_version)
     options.release = target_java_version.toInteger()
 }
 
 tasks.withType(ProcessResources).configureEach {
-    inputs.property('ppeTargetLoader', target_loader)
-    inputs.property('ppeTargetMinecraftVersion', target_minecraft_version)
+    inputs.property('sanTargetLoader', target_loader)
+    inputs.property('sanTargetMinecraftVersion', target_minecraft_version)
 }
 
 def finalArchiveTaskName = isFabric && !usesModernFabricBuild ? 'remapJar' : 'jar'
@@ -317,7 +317,7 @@ if (isFabric) {
                                  mod_authors                  : mod_authors,
                                  mod_description              : mod_description]
         inputs.properties replaceProperties
-        filesMatching(['fabric.mod.json', 'ppe_essentials.mixins.json']) {
+        filesMatching(['fabric.mod.json', 'san_essentials.mixins.json']) {
             expand replaceProperties
         }
     }

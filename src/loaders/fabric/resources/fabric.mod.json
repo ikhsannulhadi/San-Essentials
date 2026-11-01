@@ -8,19 +8,19 @@
     "${mod_authors}"
   ],
   "contact": {
-    "homepage": "https://github.com/PurpleEastZQ/PPE-Essentials",
-    "sources": "https://github.com/PurpleEastZQ/PPE-Essentials"
+    "homepage": "https://github.com/ikhsannulhadi/San-Essentials",
+    "sources": "https://github.com/ikhsannulhadi/San-Essentials"
   },
   "license": "${mod_license}",
-  "icon": "ppe_essentials.png",
+  "icon": "san_essentials.png",
   "environment": "*",
   "entrypoints": {
     "main": [
-      "me.purpleeast.mods.ppe_essentials.PpeEssentials"
+      "me.sandreamin.mods.san_essentials.SanEssentials"
     ]
   },
   "mixins": [
-    "ppe_essentials.mixins.json"
+    "san_essentials.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=${fabric_loader_min_version}",

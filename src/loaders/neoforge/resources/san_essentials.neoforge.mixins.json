@@ -1,0 +1,10 @@
+{
+  "required": true,
+  "package": "me.sandreamin.mods.san_essentials.mixin",
+  "mixins": [
+    "ServerPlayerGameModeMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

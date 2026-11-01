@@ -1,26 +1,32 @@
-# PPE Essentials
+<div align="center">
 
-[![Modrinth](https://img.shields.io/badge/Modrinth-PPE%20Essentials-00AF5C?style=flat&logo=modrinth&logoColor=white)](https://modrinth.com/mod/ppe-essentials) [![CurseForge](https://img.shields.io/badge/CurseForge-PPE%20Essentials-F16436?style=flat&logo=curseforge&logoColor=white)](https://www.curseforge.com/minecraft/mc-mods/ppe-essentials) [![GitHub](https://img.shields.io/badge/GitHub-PurpleEastZQ%2Fppe--essentials-181717?style=flat&logo=github&logoColor=white)](https://github.com/PurpleEastZQ/ppe-essentials)
+# San Essentials
 
-PPE Essentials is a lightweight mod that adds useful commands (like /tpa /repeat) and tweaks, with highly configurable options.
+**Teleport, homes and everyday utility commands — server-side, configurable, ready out of the box.**
 
-![PPE Essentials command preview](https://raw.githubusercontent.com/PurpleEastZQ/ppe-essentials/master/artwork/ppe-essentials-help-preview.png)
+[![Modrinth](https://img.shields.io/badge/Modrinth-San%20Essentials-00AF5C?style=flat&logo=modrinth&logoColor=white)](https://modrinth.com/mod/san-essentials) [![CurseForge](https://img.shields.io/badge/CurseForge-San%20Essentials-F16436?style=flat&logo=curseforge&logoColor=white)](https://www.curseforge.com/minecraft/mc-mods/san-essentials) [![GitHub](https://img.shields.io/badge/GitHub-ikhsannulhadi%2FSan--Essentials-181717?style=flat&logo=github&logoColor=white)](https://github.com/ikhsannulhadi/San-Essentials)
+
+</div>
+
+San Essentials is a lightweight essentials mod for Fabric and NeoForge. It adds the commands players actually ask for — `/tpa`, `/home`, `/warp`, `/back`, `/fly`, `/heal`, `/repeat` — and lets you switch each of them on or off, set the permission level, and tune cooldowns and distances from a single TOML file.
 
 ## Features
 
-- Server-side only mod (Can still be installed on your client for singleplayer use.)
-- Configurable command toggles, permission levels and more.
-- Configurable protection against creeper, enderman, and ravager block damage.
-- Ready out of the box; Fabric only requires Fabric API.
-- Polished messages with clickable buttons, titles, and sounds.
-- Player-selection menus for `/tpa` and `/tpahere` when no target is provided.
-- Multilingual support with automatic client language detection and a configurable `fallbackLanguage`.
-- Persistent player data for homes, warps, back locations, fly, god mode, and notice triggers.
+- **Server-side only.** Players don't need to install anything; install it on the client too if you want it in singleplayer.
+- **Every command is configurable.** Toggle commands, set permission levels, adjust RTP distance and cooldowns.
+- **Block griefing protection** against creeper explosions, endermen picking up blocks, and ravagers trampling crops.
+- **Polished feedback.** Clickable accept/deny buttons, titles, sounds, and hover hints instead of plain chat text.
+- **Player picker menus.** `/tpa` and `/tpahere` without a target open a paginated chest menu of online players.
+- **Multilingual.** Messages follow the client's language, with a configurable `fallbackLanguage` (9 languages included).
+- **Persistent player data.** Homes, warps, back locations, fly and god mode survive restarts.
+- **Light dependencies.** Fabric builds require Fabric API and nothing else.
 
 ## Supported Versions
 
-- NeoForge 1.21.1, 26.1.2
-- Fabric 1.21.1, 26.1.2
+| Loader | Minecraft |
+| --- | --- |
+| Fabric | 1.21.1, 26.1.2 |
+| NeoForge | 1.21.1, 26.1.2 |
 
 ## Commands
 
@@ -61,21 +67,36 @@ PPE Essentials is a lightweight mod that adds useful commands (like /tpa /repeat
 | `/fly [player]` | Toggle persistent flight for yourself or another player. |
 | `/god [player]` | Toggle god mode for yourself or another player. |
 | `/repeat <times> [command]` | Repeat your last command or a specified command. |
-| `/ppe-ess help` | Show the command list. Disabled or unavailable commands are shown in red. |
-| `/ppe-ess reset all` | Clear all player data. |
-| `/ppe-ess reset notice` | Clear notice trigger data. |
+| `/san-ess help` | Show the command list. Disabled or unavailable commands are shown in red. |
+| `/san-ess reset all` | Clear all player data. |
+| `/san-ess reset notice` | Clear notice trigger data. |
 
 ## Configuration
 
-All configuration options are located in `config/ppe_essentials-common.toml`.
+Everything lives in `config/san_essentials-common.toml`, written with a comment above each option. Commands are grouped under `[commands.<name>]` with `enabled` and `permissionLevel`:
 
-## Installation & Building
+```toml
+messagePrefixEnabled = false
+preventCreeperBlockDamage = true
+teleportRequestTimeoutSeconds = 60
+fallbackLanguage = "en_us"
 
-Download the jar matching your Minecraft version and mod loader, then place it in the `mods` folder.
+[commands.tpa]
+enabled = true
+permissionLevel = 0
+```
 
-Fabric installations also require Fabric API.
+`messagePrefixEnabled` controls the `[SD]` tag in front of mod messages; it is off by default.
 
-To build all supported versions from source using JDK 25:
+Unknown options left over from an older version are dropped on load and the original file is kept as a `.pre-config-migration.bak` backup.
+
+## Installation
+
+Download the jar matching your loader and Minecraft version, then drop it into `mods`. Fabric builds also require Fabric API.
+
+## Building
+
+Requires JDK 25.
 
 ```powershell
 .\build-all-versions.ps1
@@ -88,4 +109,12 @@ To build a single target:
 .\gradlew.bat buildFabric "-Ptarget_minecraft_version=26.1.2" --no-daemon --no-configuration-cache
 ```
 
-Built jars are generated under `build/libs/`.
+Jars land in `build/libs/` as `san_essentials-<loader>-<minecraft>-<version>.jar`.
+
+## Upgrading From PPE Essentials
+
+San Essentials runs under the new `san_essentials` mod id, so it does **not** read the old `ppe_essentials` config or the stored player data (homes, warps, back, fly, god). Expect a clean slate: re-copy your settings into `config/san_essentials-common.toml` and let players set their homes again, or run both mods once and move data by hand.
+
+## Credits & License
+
+San Essentials is a fork and rebrand of [PPE Essentials](https://github.com/PurpleEastZQ/ppe-essentials) by Purple_East, used under the MIT License, which also covers this project. Original copyright is retained in [LICENSE](LICENSE).

@@ -1,0 +1,19 @@
+{
+  "required": true,
+  "package": "me.sandreamin.mods.san_essentials.mixin",
+  "compatibilityLevel": "${mixin_compatibility_level}",
+  "mixins": [
+    "CommandsMixin",
+    "CreeperMixin",
+    "CropBlockMixin",
+    "EndermanLeaveBlockGoalMixin",
+    "EndermanTakeBlockGoalMixin",
+    "RavagerMixin",
+    "ServerPlayerAbilityRefreshMixin",
+    "ServerPlayerGameModeMixin",
+    "ServerPlayerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
