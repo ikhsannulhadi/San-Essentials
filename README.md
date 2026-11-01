@@ -4,7 +4,7 @@
 
 **Teleport, homes and everyday utility commands — server-side, configurable, ready out of the box.**
 
-[![Modrinth](https://img.shields.io/badge/Modrinth-San%20Essentials-00AF5C?style=flat&logo=modrinth&logoColor=white)](https://modrinth.com/mod/san-essentials) [![CurseForge](https://img.shields.io/badge/CurseForge-San%20Essentials-F16436?style=flat&logo=curseforge&logoColor=white)](https://www.curseforge.com/minecraft/mc-mods/san-essentials) [![GitHub](https://img.shields.io/badge/GitHub-ikhsannulhadi%2FSan--Essentials-181717?style=flat&logo=github&logoColor=white)](https://github.com/ikhsannulhadi/San-Essentials)
+[![Modrinth](https://img.shields.io/badge/Modrinth-San%20Essentials-00AF5C?style=flat&logo=modrinth&logoColor=white)](https://modrinth.com/mod/san-essentials) [![CurseForge](https://img.shields.io/badge/CurseForge-San%20Essentials-F16436?style=flat&logo=curseforge&logoColor=white)](https://www.curseforge.com/minecraft/mc-mods/san-essentials)
 
 </div>
 
@@ -86,7 +86,7 @@ enabled = true
 permissionLevel = 0
 ```
 
-`messagePrefixEnabled` controls the `[SD]` tag in front of mod messages; it is off by default.
+`messagePrefixEnabled` controls the `[SE]` tag in front of mod messages; it is off by default.
 
 Unknown options left over from an older version are dropped on load and the original file is kept as a `.pre-config-migration.bak` backup.
 

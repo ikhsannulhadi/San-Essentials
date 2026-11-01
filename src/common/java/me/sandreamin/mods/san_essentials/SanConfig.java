@@ -26,7 +26,7 @@ public final class SanConfig {
     private static final ValueDefinition MESSAGE_PREFIX_ENABLED = booleanValue(
             "messagePrefixEnabled",
             false,
-            " Whether mod messages should include the [SD] prefix."
+            " Whether mod messages should include the [SE] prefix."
     );
     private static final ValueDefinition FIRST_JOIN_NOTICE = booleanValue(
             "firstJoinNotice",

@@ -21,7 +21,7 @@ public final class SanLang {
     public static final Component PREFIX = Component.literal("")
             .append(coloredLiteral("[", 0xAAAAAA))
             .append(coloredLiteral("S", 0x6C8CFF))
-            .append(coloredLiteral("D", 0x4D7EF7))
+            .append(coloredLiteral("E", 0x4D7EF7))
             .append(coloredLiteral("] ", 0xAAAAAA));
 
     private static final Map<String, Map<String, String>> LANGUAGES = Map.of(
