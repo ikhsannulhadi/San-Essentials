@@ -4,7 +4,7 @@
 
 **Teleport, homes and everyday utility commands.**
 
-[![Modrinth](https://img.shields.io/badge/Modrinth-San%20Essentials-00AF5C?style=flat&logo=modrinth&logoColor=white)](https://modrinth.com/mod/san-essentials)
+[![Modrinth](https://img.shields.io/badge/Modrinth-San%20Essentials-00AF5C?style=flat&logo=modrinth&logoColor=white)](https://modrinth.com)
 
 </div>
 
@@ -19,6 +19,7 @@ San Essentials is a lightweight essentials mod for Fabric and NeoForge. It adds 
 - **Player picker menus.** `/tpa` and `/tpahere` without a target open a paginated chest menu of online players.
 - **Multilingual.** Messages follow the client's language, with a configurable `fallbackLanguage` (9 languages included).
 - **Persistent player data.** Homes, warps, back locations, fly and god mode survive restarts.
+- **Multiple named homes.** Each player can save several homes and pick one with `/home <name>`; the limit is configurable (`maxHomes`, 1-10, default 5).
 - **Light dependencies.** Fabric builds require Fabric API and nothing else.
 
 ## Supported Versions
@@ -50,12 +51,15 @@ San Essentials is a lightweight essentials mod for Fabric and NeoForge. It adds 
 
 | Command | Description |
 | --- | --- |
-| `/sethome` | Set your home. |
-| `/home` | Teleport home. |
-| `/delhome` | Delete your home. |
+| `/sethome [name]` | Set a home. Omitting the name sets the default home used by `/home`. |
+| `/home [name]` | Teleport to a named home, or the default home when the name is omitted. |
+| `/homes` | List your saved homes and how many slots you are using. |
+| `/delhome [name]` | Delete a named home, or the default home when the name is omitted. |
 | `/setwarp <name>` | Create a server warp. |
 | `/warp <name>` | Teleport to a server warp. |
 | `/delwarp <name>` | Delete a server warp. |
+
+Home names are lowercased and limited to letters, numbers and underscores (32 characters max). `/home` without a name falls back to listing your homes if the default one is missing, and tab-completion offers the homes you own.
 
 ### Utility And Admin
 
@@ -78,6 +82,7 @@ Everything lives in `config/san_essentials-common.toml`, written with a comment 
 ```toml
 messagePrefixEnabled = false
 preventCreeperBlockDamage = true
+maxHomes = 5
 teleportRequestTimeoutSeconds = 60
 fallbackLanguage = "en_us"
 
@@ -89,6 +94,8 @@ permissionLevel = 0
 `messagePrefixEnabled` controls the `[SE]` tag in front of mod messages; it is off by default.
 
 Unknown options left over from an older version are dropped on load and the original file is kept as a `.pre-config-migration.bak` backup.
+
+Player data is stored inside the world folder — `data/san_essentials_player_data.dat` on Minecraft 1.21.1 and `data/san_essentials/player_data.dat` on 26.1.2. A schema upgrade writes a `.dat.bak` copy of the previous file before converting it, so an interrupted migration can always be rolled back by hand.
 
 ## Installation
 

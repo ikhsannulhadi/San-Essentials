@@ -4,6 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.minecraft.commands.CommandSourceStack;
@@ -34,6 +35,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -45,6 +47,7 @@ import java.util.concurrent.CompletableFuture;
 public final class SanCommands {
     private static final int INTERNAL_COMMAND_PERMISSION_LEVEL = 4;
     private static final int TELEPORT_SOUND_DELAY_TICKS = 1;
+    private static final int MAX_HOME_NAME_LENGTH = 32;
     private static final Map<UUID, Integer> RTP_COOLDOWNS = new HashMap<>();
     private static final Map<UUID, String> LAST_COMMANDS = new HashMap<>();
     private static final List<PendingSound> PENDING_SOUNDS = new ArrayList<>();
@@ -122,17 +125,40 @@ public final class SanCommands {
         if (enabled("sethome")) {
             dispatcher.register(Commands.literal("sethome")
                     .requires(source -> canUse(source, "sethome"))
-                    .executes(context -> sethome(context.getSource().getPlayerOrException())));
+                    .executes(context -> sethome(context.getSource().getPlayerOrException(), SanPlayerDataStore.DEFAULT_HOME_NAME))
+                    .then(Commands.argument("name", StringArgumentType.word())
+                            .suggests(SanCommands::suggestOwnHomes)
+                            .executes(context -> sethome(
+                                    context.getSource().getPlayerOrException(),
+                                    StringArgumentType.getString(context, "name")
+                            ))));
         }
         if (enabled("delhome")) {
             dispatcher.register(Commands.literal("delhome")
                     .requires(source -> canUse(source, "delhome"))
-                    .executes(context -> delhome(context.getSource().getPlayerOrException())));
+                    .executes(context -> delhome(context.getSource().getPlayerOrException(), SanPlayerDataStore.DEFAULT_HOME_NAME))
+                    .then(Commands.argument("name", StringArgumentType.word())
+                            .suggests(SanCommands::suggestOwnHomes)
+                            .executes(context -> delhome(
+                                    context.getSource().getPlayerOrException(),
+                                    StringArgumentType.getString(context, "name")
+                            ))));
         }
         if (enabled("home")) {
             dispatcher.register(Commands.literal("home")
                     .requires(source -> canUse(source, "home"))
-                    .executes(context -> home(context.getSource().getPlayerOrException())));
+                    .executes(context -> home(context.getSource().getPlayerOrException(), SanPlayerDataStore.DEFAULT_HOME_NAME))
+                    .then(Commands.argument("name", StringArgumentType.word())
+                            .suggests(SanCommands::suggestOwnHomes)
+                            .executes(context -> home(
+                                    context.getSource().getPlayerOrException(),
+                                    StringArgumentType.getString(context, "name")
+                            ))));
+        }
+        if (enabled("homes")) {
+            dispatcher.register(Commands.literal("homes")
+                    .requires(source -> canUse(source, "homes"))
+                    .executes(context -> homes(context.getSource().getPlayerOrException())));
         }
         if (enabled("suicide")) {
             dispatcher.register(Commands.literal("suicide")
@@ -479,36 +505,112 @@ public final class SanCommands {
         return 0;
     }
 
-    private static int sethome(ServerPlayer player) {
-        SanPlayerData.get(SanCompat.server(player)).setHome(player.getUUID(), SanLocation.of(player));
-        send(player, "san_essentials.sethome.success");
+    private static int sethome(ServerPlayer player, String name) {
+        String homeName = validatedHomeName(player, name);
+        if (homeName == null) {
+            return 0;
+        }
+
+        int maxHomes = SanConfig.maxHomes();
+        if (!SanPlayerData.get(SanCompat.server(player)).setHome(player.getUUID(), homeName, SanLocation.of(player), maxHomes)) {
+            send(player, "san_essentials.sethome.limit", homeName, maxHomes);
+            return 0;
+        }
+
+        send(player, isDefaultHome(homeName)
+                ? "san_essentials.sethome.success"
+                : "san_essentials.sethome.success.named", homeName);
         return 1;
     }
 
-    private static int delhome(ServerPlayer player) {
-        if (SanPlayerData.get(SanCompat.server(player)).deleteHome(player.getUUID())) {
-            send(player, "san_essentials.delhome.success");
+    private static int delhome(ServerPlayer player, String name) {
+        String homeName = validatedHomeName(player, name);
+        if (homeName == null) {
+            return 0;
+        }
+
+        if (SanPlayerData.get(SanCompat.server(player)).deleteHome(player.getUUID(), homeName)) {
+            send(player, isDefaultHome(homeName)
+                    ? "san_essentials.delhome.success"
+                    : "san_essentials.delhome.success.named", homeName);
             return 1;
         }
 
-        send(player, "san_essentials.delhome.none");
+        send(player, isDefaultHome(homeName)
+                ? "san_essentials.delhome.none"
+                : "san_essentials.home.none.named", homeName);
         return 0;
     }
 
-    private static int home(ServerPlayer player) {
-        Optional<SanLocation> location = SanPlayerData.get(SanCompat.server(player)).home(player.getUUID());
+    private static int home(ServerPlayer player, String name) {
+        String homeName = validatedHomeName(player, name);
+        if (homeName == null) {
+            return 0;
+        }
+
+        SanPlayerData data = SanPlayerData.get(SanCompat.server(player));
+        Optional<SanLocation> location = data.home(player.getUUID(), homeName);
         if (location.isPresent()) {
             if (!teleport(player, location.get())) {
                 return 0;
             }
-            send(player, "san_essentials.home.success");
+            send(player, isDefaultHome(homeName)
+                    ? "san_essentials.home.success"
+                    : "san_essentials.home.success.named", homeName);
             title(player, "san_essentials.home.title", "san_essentials.home.subtitle", player.getName());
             playSoundLater(player, SoundEvents.VILLAGER_CELEBRATE, SoundSource.PLAYERS, 1.0F, 1.5F, TELEPORT_SOUND_DELAY_TICKS);
             return 1;
         }
 
+        if (!data.homeNames(player.getUUID()).isEmpty()) {
+            sendHomes(player, data, homeName);
+            return 0;
+        }
+
         send(player, "san_essentials.home.none");
         return 0;
+    }
+
+    private static int homes(ServerPlayer player) {
+        SanPlayerData data = SanPlayerData.get(SanCompat.server(player));
+        if (data.homeNames(player.getUUID()).isEmpty()) {
+            send(player, "san_essentials.homes.none");
+            return 0;
+        }
+
+        sendHomes(player, data, null);
+        return 1;
+    }
+
+    private static void sendHomes(ServerPlayer player, SanPlayerData data, String missingHome) {
+        if (missingHome != null) {
+            send(player, "san_essentials.home.none.named", missingHome);
+        }
+
+        List<String> names = new ArrayList<>(data.homeNames(player.getUUID()));
+        names.sort(String.CASE_INSENSITIVE_ORDER);
+
+        MutableComponent line = SanLang.component(player, "san_essentials.homes.header", names.size(), SanConfig.maxHomes());
+        for (String name : names) {
+            line.append(Component.literal(" ")).append(SanLang.component(player, "san_essentials.homes.entry", name)
+                    .withStyle(Style.EMPTY
+                            .withClickEvent(SanCompat.runCommandClick("/home " + name))
+                            .withHoverEvent(SanCompat.showTextHover(SanLang.component(player, "san_essentials.homes.entry.tooltip")))));
+        }
+        sendRaw(player, SanLang.prefixed(line));
+    }
+
+    private static String validatedHomeName(ServerPlayer player, String name) {
+        String normalized = name.toLowerCase(Locale.ROOT);
+        if (!normalized.matches("[a-z0-9_]{1," + MAX_HOME_NAME_LENGTH + "}")) {
+            send(player, "san_essentials.home.name.invalid", name);
+            return null;
+        }
+        return normalized;
+    }
+
+    private static boolean isDefaultHome(String name) {
+        return SanPlayerDataStore.DEFAULT_HOME_NAME.equals(name);
     }
 
     private static int suicide(ServerPlayer player) {
@@ -568,7 +670,7 @@ public final class SanCommands {
                 helpCommand("tpaherea"), helpCommand("tpahered"),
                 helpCommand("back"), helpCommand("dback"), helpCommand("tback"), helpCommand("spawn"), helpCommand("rtp"));
         sendHelpLine(player, source, "san_essentials.help.home",
-                helpCommand("home"), helpCommand("sethome"), helpCommand("delhome"), helpCommand("warp"));
+                helpCommand("home"), helpCommand("homes"), helpCommand("sethome"), helpCommand("delhome"), helpCommand("warp"));
         sendHelpLine(player, source, "san_essentials.help.utility",
                 helpCommand("suicide"), helpCommand("trash"));
         sendHelpLine(player, source, "san_essentials.help.op",
@@ -802,6 +904,11 @@ public final class SanCommands {
 
     private static CompletableFuture<Suggestions> suggestWarps(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
         return SharedSuggestionProvider.suggest(SanPlayerData.get(context.getSource().getServer()).warpNames(), builder);
+    }
+
+    private static CompletableFuture<Suggestions> suggestOwnHomes(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        return SharedSuggestionProvider.suggest(SanPlayerData.get(context.getSource().getServer()).homeNames(player.getUUID()), builder);
     }
 
     private static boolean enabled(String command) {

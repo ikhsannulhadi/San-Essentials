@@ -13,7 +13,9 @@ import java.util.UUID;
  * Holds persistent player and server state independently of version-specific NBT APIs.
  */
 public abstract class SanPlayerDataStore extends SavedData {
-    protected final Map<UUID, SanLocation> homes = new HashMap<>();
+    public static final String DEFAULT_HOME_NAME = "home";
+
+    protected final Map<UUID, Map<String, SanLocation>> homes = new HashMap<>();
     protected final Map<UUID, SanLocation> deathBacks = new HashMap<>();
     protected final Map<UUID, SanLocation> teleportBacks = new HashMap<>();
     protected final Map<String, SanLocation> warps = new HashMap<>();
@@ -23,21 +25,40 @@ public abstract class SanPlayerDataStore extends SavedData {
     protected final Set<UUID> backNotice = new HashSet<>();
     protected final Set<UUID> firstJoinNotice = new HashSet<>();
 
-    public Optional<SanLocation> home(UUID player) {
-        return Optional.ofNullable(homes.get(player));
+    public Optional<SanLocation> home(UUID player, String name) {
+        return Optional.ofNullable(homes.getOrDefault(player, Map.of()).get(name));
     }
 
-    public void setHome(UUID player, SanLocation location) {
-        homes.put(player, location);
-        setDirty();
+    public Set<String> homeNames(UUID player) {
+        return Set.copyOf(homes.getOrDefault(player, Map.of()).keySet());
     }
 
-    public boolean deleteHome(UUID player) {
-        boolean removed = homes.remove(player) != null;
-        if (removed) {
-            setDirty();
+    /**
+     * Stores a home, replacing one that already uses the same name. A new name is rejected
+     * when the player already owns {@code maxHomes} homes.
+     */
+    public boolean setHome(UUID player, String name, SanLocation location, int maxHomes) {
+        Map<String, SanLocation> owned = homes.computeIfAbsent(player, key -> new HashMap<>());
+        if (!owned.containsKey(name) && owned.size() >= maxHomes) {
+            return false;
         }
-        return removed;
+
+        owned.put(name, location);
+        setDirty();
+        return true;
+    }
+
+    public boolean deleteHome(UUID player, String name) {
+        Map<String, SanLocation> owned = homes.get(player);
+        if (owned == null || owned.remove(name) == null) {
+            return false;
+        }
+
+        if (owned.isEmpty()) {
+            homes.remove(player);
+        }
+        setDirty();
+        return true;
     }
 
     public Optional<SanLocation> deathBack(UUID player) {

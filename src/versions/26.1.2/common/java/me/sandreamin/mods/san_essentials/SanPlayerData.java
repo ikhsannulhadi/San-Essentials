@@ -10,6 +10,7 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 import net.minecraft.world.level.storage.LevelResource;
 
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -47,10 +48,10 @@ public class SanPlayerData extends SanPlayerDataStore {
     static SanPlayerData load(CompoundTag tag) {
         boolean migrated = SanPlayerDataMigrations.migrate(tag);
         SanPlayerData data = new SanPlayerData();
-        data.readLocationMap(list(tag, "homes"), data.homes);
+        data.readHomeMap(list(tag, "homes"), data.homes);
         data.readLocationMap(list(tag, "deathBacks"), data.deathBacks);
         data.readLocationMap(list(tag, "teleportBacks"), data.teleportBacks);
-        data.readWarpMap(list(tag, "warps"), data.warps);
+        data.readNamedLocationMap(list(tag, "warps"), data.warps);
 
         data.readUuidSet(list(tag, "tpaAuto"), data.tpaAuto);
         data.readUuidSet(list(tag, "fly"), data.fly);
@@ -66,10 +67,10 @@ public class SanPlayerData extends SanPlayerDataStore {
     private CompoundTag saveTag() {
         CompoundTag tag = new CompoundTag();
         tag.putInt(SanPlayerDataMigrations.SCHEMA_VERSION_KEY, SanPlayerDataMigrations.CURRENT_SCHEMA_VERSION);
-        tag.put("homes", writeLocationMap(homes));
+        tag.put("homes", writeHomeMap(homes));
         tag.put("deathBacks", writeLocationMap(deathBacks));
         tag.put("teleportBacks", writeLocationMap(teleportBacks));
-        tag.put("warps", writeWarpMap(warps));
+        tag.put("warps", writeNamedLocationMap(warps));
 
         tag.put("tpaAuto", writeUuidSet(tpaAuto));
         tag.put("fly", writeUuidSet(fly));
@@ -97,14 +98,36 @@ public class SanPlayerData extends SanPlayerDataStore {
         return list;
     }
 
-    private void readWarpMap(ListTag list, Map<String, SanLocation> target) {
+    private void readHomeMap(ListTag list, Map<UUID, Map<String, SanLocation>> target) {
+        for (int i = 0; i < list.size(); i++) {
+            CompoundTag entry = list.getCompound(i).orElseGet(CompoundTag::new);
+            Map<String, SanLocation> owned = new HashMap<>();
+            readNamedLocationMap(list(entry, "homes"), owned);
+            if (!owned.isEmpty()) {
+                target.put(readUuid(entry), owned);
+            }
+        }
+    }
+
+    private ListTag writeHomeMap(Map<UUID, Map<String, SanLocation>> source) {
+        ListTag list = new ListTag();
+        for (Map.Entry<UUID, Map<String, SanLocation>> item : source.entrySet()) {
+            CompoundTag entry = new CompoundTag();
+            writeUuid(entry, item.getKey());
+            entry.put("homes", writeNamedLocationMap(item.getValue()));
+            list.add(entry);
+        }
+        return list;
+    }
+
+    private void readNamedLocationMap(ListTag list, Map<String, SanLocation> target) {
         for (int i = 0; i < list.size(); i++) {
             CompoundTag entry = list.getCompound(i).orElseGet(CompoundTag::new);
             target.put(entry.getString("name").orElse(""), SanLocation.load(entry.getCompound("location").orElseGet(CompoundTag::new)));
         }
     }
 
-    private ListTag writeWarpMap(Map<String, SanLocation> source) {
+    private ListTag writeNamedLocationMap(Map<String, SanLocation> source) {
         ListTag list = new ListTag();
         for (Map.Entry<String, SanLocation> item : source.entrySet()) {
             CompoundTag entry = new CompoundTag();

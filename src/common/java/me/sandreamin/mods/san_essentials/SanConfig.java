@@ -48,6 +48,13 @@ public final class SanConfig {
             true,
             " Whether ravagers are prevented from breaking leaves and crops."
     );
+    private static final ValueDefinition MAX_HOMES = intValue(
+            "maxHomes",
+            5,
+            1,
+            10,
+            " How many named homes each player may save with /sethome."
+    );
     private static final ValueDefinition RTP_COOLDOWN_SECONDS = intValue(
             "rtpCooldownSeconds",
             30,
@@ -103,6 +110,7 @@ public final class SanConfig {
             PREVENT_CREEPER_BLOCK_DAMAGE,
             PREVENT_ENDERMAN_BLOCK_DAMAGE,
             PREVENT_RAVAGER_BLOCK_DAMAGE,
+            MAX_HOMES,
             RTP_COOLDOWN_SECONDS,
             RTP_MIN_DISTANCE,
             RTP_MAX_DISTANCE,
@@ -135,6 +143,7 @@ public final class SanConfig {
             command("sethome", true, 0),
             command("delhome", true, 0),
             command("home", true, 0),
+            command("homes", true, 0),
             command("suicide", true, 0),
             command("trash", true, 0),
             command("san-ess", true, 0),
@@ -189,6 +198,10 @@ public final class SanConfig {
 
     public static boolean preventRavagerBlockDamage() {
         return SanConfigBackend.booleanValue(PREVENT_RAVAGER_BLOCK_DAMAGE);
+    }
+
+    public static int maxHomes() {
+        return SanConfigBackend.intValue(MAX_HOMES);
     }
 
     public static int rtpCooldownSeconds() {
