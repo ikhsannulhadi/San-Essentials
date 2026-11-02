@@ -2,9 +2,9 @@
 
 # San Essentials
 
-**Teleport, homes and everyday utility commands — server-side, configurable, ready out of the box.**
+**Teleport, homes and everyday utility commands.**
 
-[![Modrinth](https://img.shields.io/badge/Modrinth-San%20Essentials-00AF5C?style=flat&logo=modrinth&logoColor=white)](https://modrinth.com/mod/san-essentials) [![CurseForge](https://img.shields.io/badge/CurseForge-San%20Essentials-F16436?style=flat&logo=curseforge&logoColor=white)](https://www.curseforge.com/minecraft/mc-mods/san-essentials)
+[![Modrinth](https://img.shields.io/badge/Modrinth-San%20Essentials-00AF5C?style=flat&logo=modrinth&logoColor=white)](https://modrinth.com/mod/san-essentials)
 
 </div>
 
