@@ -4,7 +4,8 @@
 
 **Teleport, homes and everyday utility commands.**
 
-[![Modrinth](https://img.shields.io/badge/Modrinth-San%20Essentials-00AF5C?style=flat&logo=modrinth&logoColor=white)](https://modrinth.com)
+[![CurseForge](https://img.shields.io/badge/CurseForge-San%20Essentials-F16436?style=flat&logo=curseforge&logoColor=white)](https://www.curseforge.com/minecraft/mc-mods/sanessentials)
+[![Modrinth](https://img.shields.io/badge/Modrinth-San%20Essentials-00AF5C?style=flat&logo=modrinth&logoColor=white)](https://modrinth.com/mod/sanessentials)
 
 </div>
 
