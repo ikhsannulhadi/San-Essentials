@@ -55,6 +55,7 @@
   "san_essentials.teleport_menu.refresh.description": "§7重新读取当前在线玩家",
   "san_essentials.rtp.cooldown": "§c请 §e%s 秒 §c后再使用",
   "san_essentials.rtp.success": "§a已进行随机传送",
+  "san_essentials.rtp.no_safe_location": "§c未找到安全的随机传送位置，请重试",
   "san_essentials.rtp.title": "§a传送成功",
   "san_essentials.rtp.subtitle": "§f注意安全",
   "san_essentials.spawn.success": "§a已传送至世界出生点",

@@ -55,6 +55,7 @@
   "san_essentials.teleport_menu.refresh.description": "§7Lädt die aktuell online Spieler neu",
   "san_essentials.rtp.cooldown": "§cBitte warte §e%s Sekunden§c, bevor du das erneut benutzt",
   "san_essentials.rtp.success": "§aZufälliger Teleport durchgeführt",
+  "san_essentials.rtp.no_safe_location": "§cKein sicherer zufälliger Teleportort gefunden, bitte versuche es erneut",
   "san_essentials.rtp.title": "§aTeleportiert",
   "san_essentials.rtp.subtitle": "§fBleib vorsichtig",
   "san_essentials.spawn.success": "§aZum Welt-Spawn teleportiert",

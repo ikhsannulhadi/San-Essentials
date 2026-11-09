@@ -55,6 +55,7 @@
   "san_essentials.teleport_menu.refresh.description": "§7현재 접속 중인 플레이어를 다시 불러옵니다",
   "san_essentials.rtp.cooldown": "§c다시 사용하려면 §e%s초 §c기다려 주세요",
   "san_essentials.rtp.success": "§a랜덤 순간이동을 수행했습니다",
+  "san_essentials.rtp.no_safe_location": "§c안전한 랜덤 순간이동 위치를 찾지 못했습니다. 다시 시도해 주세요",
   "san_essentials.rtp.title": "§a순간이동 완료",
   "san_essentials.rtp.subtitle": "§f조심하세요",
   "san_essentials.spawn.success": "§a월드 스폰으로 순간이동했습니다",

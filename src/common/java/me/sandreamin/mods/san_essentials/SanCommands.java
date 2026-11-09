@@ -12,6 +12,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
@@ -23,12 +24,16 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.food.FoodData;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.border.WorldBorder;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -45,9 +50,12 @@ import java.util.concurrent.CompletableFuture;
  * Registers San commands and owns their loader-independent runtime behavior.
  */
 public final class SanCommands {
-    private static final int INTERNAL_COMMAND_PERMISSION_LEVEL = 4;
     private static final int TELEPORT_SOUND_DELAY_TICKS = 1;
     private static final int MAX_HOME_NAME_LENGTH = 32;
+    private static final int RTP_MAX_ATTEMPTS = 12;
+    private static final int RTP_FALLBACK_ATTEMPTS = 8;
+    private static final int RTP_BORDER_MARGIN = 32;
+    private static final int RTP_NETHER_MAX_Y = 126;
     private static final Map<UUID, Integer> RTP_COOLDOWNS = new HashMap<>();
     private static final Map<UUID, String> LAST_COMMANDS = new HashMap<>();
     private static final List<PendingSound> PENDING_SOUNDS = new ArrayList<>();
@@ -449,21 +457,120 @@ public final class SanCommands {
             return 0;
         }
 
-        String name = SanCompat.profileName(player);
-        int minDistance = player.level().dimension() == Level.NETHER ? SanConfig.rtpNetherMinDistance() : SanConfig.rtpMinDistance();
-        int maxDistance = player.level().dimension() == Level.NETHER ? SanConfig.rtpNetherMaxDistance() : SanConfig.rtpMaxDistance();
-        String command = player.level().dimension() == Level.NETHER
-                ? "execute as " + name + " at " + name + " run spreadplayers ~ ~ " + minDistance + " " + maxDistance + " under 127 false @s"
-                : "execute as " + name + " at " + name + " run spreadplayers ~ ~ " + minDistance + " " + maxDistance + " false @s";
-        SanCompat.server(player).getCommands().performPrefixedCommand(SanCompat.withPermission(player.createCommandSourceStack(), INTERNAL_COMMAND_PERMISSION_LEVEL).withSuppressedOutput(), command);
+        ServerLevel level = SanCompat.level(player);
+        Optional<BlockPos> destination = findRandomTeleportDestination(player, level);
+        if (destination.isEmpty()) {
+            send(player, "san_essentials.rtp.no_safe_location");
+            applyRtpCooldown(player, tick);
+            return 0;
+        }
+
+        BlockPos target = destination.get();
+        teleport(player, level, target.getX() + 0.5, target.getY(), target.getZ() + 0.5, player.getYRot(), player.getXRot());
         send(player, "san_essentials.rtp.success");
         title(player, "san_essentials.rtp.title", "san_essentials.rtp.subtitle");
         teleportSound(player);
+        applyRtpCooldown(player, tick);
+        return 1;
+    }
+
+    private static void applyRtpCooldown(ServerPlayer player, int tick) {
         int cooldownSeconds = SanConfig.rtpCooldownSeconds();
         if (cooldownSeconds > 0) {
             RTP_COOLDOWNS.put(player.getUUID(), tick + secondsToTicks(cooldownSeconds));
         }
-        return 1;
+    }
+
+    private static Optional<BlockPos> findRandomTeleportDestination(ServerPlayer player, ServerLevel level) {
+        WorldBorder border = level.getWorldBorder();
+        double borderWidth = border.getMaxX() - border.getMinX();
+        double borderDepth = border.getMaxZ() - border.getMinZ();
+        double margin = Math.min(RTP_BORDER_MARGIN, Math.min(borderWidth, borderDepth) / 4.0);
+        double minX = border.getMinX() + margin;
+        double maxX = border.getMaxX() - margin;
+        double minZ = border.getMinZ() + margin;
+        double maxZ = border.getMaxZ() - margin;
+        if (minX >= maxX || minZ >= maxZ) {
+            return Optional.empty();
+        }
+
+        boolean nether = level.dimension() == Level.NETHER;
+        int minDistance = nether ? SanConfig.rtpNetherMinDistance() : SanConfig.rtpMinDistance();
+        int maxDistance = nether ? SanConfig.rtpNetherMaxDistance() : SanConfig.rtpMaxDistance();
+        double minDistanceSquared = (double) minDistance * minDistance;
+        double maxDistanceSquared = (double) maxDistance * maxDistance;
+
+        for (int attempt = 0; attempt < RTP_MAX_ATTEMPTS; attempt++) {
+            double angle = player.getRandom().nextDouble() * Math.PI * 2.0;
+            double distance = Math.sqrt(minDistanceSquared
+                    + player.getRandom().nextDouble() * (maxDistanceSquared - minDistanceSquared));
+            double x = player.getX() + Math.cos(angle) * distance;
+            double z = player.getZ() + Math.sin(angle) * distance;
+            if (x < minX || x >= maxX || z < minZ || z >= maxZ) {
+                continue;
+            }
+
+            Optional<BlockPos> destination = findSafePosition(level, (int) Math.floor(x), (int) Math.floor(z), nether);
+            if (destination.isPresent()) {
+                return destination;
+            }
+        }
+
+        // The configured distance ring may lie entirely outside the border or over unsafe terrain.
+        // A safe spot inside the border is still better than leaving the player where they are.
+        for (int attempt = 0; attempt < RTP_FALLBACK_ATTEMPTS; attempt++) {
+            double x = minX + player.getRandom().nextDouble() * (maxX - minX);
+            double z = minZ + player.getRandom().nextDouble() * (maxZ - minZ);
+            Optional<BlockPos> destination = findSafePosition(level, (int) Math.floor(x), (int) Math.floor(z), nether);
+            if (destination.isPresent()) {
+                return destination;
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    private static Optional<BlockPos> findSafePosition(ServerLevel level, int x, int z, boolean nether) {
+        int minY = SanCompat.minBuildY(level);
+        int maxY = SanCompat.maxBuildY(level) - 2;
+        if (nether) {
+            maxY = Math.min(maxY, RTP_NETHER_MAX_Y);
+        }
+
+        for (int y = maxY; y > minY; y--) {
+            BlockPos groundPos = new BlockPos(x, y - 1, z);
+            BlockState ground = level.getBlockState(groundPos);
+            if (!isSafeGround(level, groundPos, ground)) {
+                continue;
+            }
+
+            BlockPos feetPos = new BlockPos(x, y, z);
+            if (!level.getBlockState(feetPos).isAir()) {
+                continue;
+            }
+
+            if (!level.getBlockState(feetPos.above()).isAir()) {
+                continue;
+            }
+
+            return Optional.of(feetPos);
+        }
+
+        return Optional.empty();
+    }
+
+    private static boolean isSafeGround(ServerLevel level, BlockPos pos, BlockState state) {
+        if (state.isAir() || !state.getFluidState().isEmpty()) {
+            return false;
+        }
+
+        if (state.is(BlockTags.FIRE) || state.is(BlockTags.CAMPFIRES) || state.is(BlockTags.LEAVES)
+                || state.is(Blocks.MAGMA_BLOCK) || state.is(Blocks.CACTUS)
+                || state.is(Blocks.SWEET_BERRY_BUSH) || state.is(Blocks.POWDER_SNOW)) {
+            return false;
+        }
+
+        return state.isFaceSturdy(level, pos, Direction.UP);
     }
 
     private static int spawn(ServerPlayer player) {

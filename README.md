@@ -42,7 +42,7 @@ San Essentials is a lightweight essentials mod for Fabric and NeoForge. It adds 
 | `/tpahere [player]` | Request another player to teleport to you, or open the player menu when omitted. |
 | `/tpaherea` | Accept a pending TPAhere request. |
 | `/tpahered` | Deny a pending TPAhere request. |
-| `/rtp` | Randomly teleport nearby. |
+| `/rtp` | Randomly teleport to a safe location inside the world border. |
 | `/spawn` | Teleport to world spawn. |
 | `/back` or `/dback` | Return to your last death location. |
 | `/tback` | Return to your previous teleport location. |

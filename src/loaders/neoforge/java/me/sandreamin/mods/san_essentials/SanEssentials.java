@@ -14,9 +14,11 @@ public class SanEssentials {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public SanEssentials(IEventBus modEventBus, ModContainer modContainer) {
+        SanStartupBanner.logLoading();
         NeoForge.EVENT_BUS.register(SanNeoForgeCommands.class);
         NeoForge.EVENT_BUS.register(SanEvents.class);
         SanConfig.load();
         modContainer.registerConfig(ModConfig.Type.COMMON, SanConfigBackend.SPEC);
+        SanStartupBanner.logLoaded();
     }
 }

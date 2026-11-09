@@ -11,7 +11,6 @@ import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.LevelBasedPermissionSet;
 import net.minecraft.server.permissions.Permission;
 import net.minecraft.server.permissions.PermissionLevel;
 import net.minecraft.sounds.SoundEvent;
@@ -49,6 +48,14 @@ public final class SanCompat {
         return server(player).getRespawnData().yaw();
     }
 
+    public static int minBuildY(ServerLevel level) {
+        return level.getMinY();
+    }
+
+    public static int maxBuildY(ServerLevel level) {
+        return level.getMaxY();
+    }
+
     public static String profileName(ServerPlayer player) {
         return player.getGameProfile().name();
     }
@@ -72,10 +79,6 @@ public final class SanCompat {
 
     public static void teleport(ServerPlayer player, ServerLevel level, double x, double y, double z, float yRot, float xRot) {
         player.teleportTo(level, x, y, z, Set.of(), yRot, xRot, false);
-    }
-
-    public static CommandSourceStack withPermission(CommandSourceStack source, int level) {
-        return source.withPermission(LevelBasedPermissionSet.forLevel(PermissionLevel.byId(level)));
     }
 
     public static boolean hasPermission(CommandSourceStack source, int level) {

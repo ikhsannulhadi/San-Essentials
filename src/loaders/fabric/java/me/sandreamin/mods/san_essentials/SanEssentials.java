@@ -11,8 +11,10 @@ public class SanEssentials implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        SanStartupBanner.logLoading();
         SanConfig.load();
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> SanCommands.registerCommands(dispatcher));
         SanEvents.register();
+        SanStartupBanner.logLoaded();
     }
 }

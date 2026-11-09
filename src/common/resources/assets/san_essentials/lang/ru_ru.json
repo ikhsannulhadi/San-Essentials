@@ -55,6 +55,7 @@
   "san_essentials.teleport_menu.refresh.description": "§7Заново загрузить игроков в сети",
   "san_essentials.rtp.cooldown": "§cПодождите §e%s секунд§c перед повторным использованием",
   "san_essentials.rtp.success": "§aСлучайная телепортация выполнена",
+  "san_essentials.rtp.no_safe_location": "§cНе удалось найти безопасное место для случайной телепортации, попробуйте ещё раз",
   "san_essentials.rtp.title": "§aТелепортировано",
   "san_essentials.rtp.subtitle": "§fБудьте осторожны",
   "san_essentials.spawn.success": "§aТелепортировано на точку появления мира",

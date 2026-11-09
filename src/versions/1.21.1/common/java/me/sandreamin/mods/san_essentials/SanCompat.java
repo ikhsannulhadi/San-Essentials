@@ -41,6 +41,14 @@ public final class SanCompat {
         return level(player).getSharedSpawnAngle();
     }
 
+    public static int minBuildY(ServerLevel level) {
+        return level.getMinBuildHeight();
+    }
+
+    public static int maxBuildY(ServerLevel level) {
+        return level.getMaxBuildHeight();
+    }
+
     public static String profileName(ServerPlayer player) {
         return player.getGameProfile().getName();
     }
@@ -55,10 +63,6 @@ public final class SanCompat {
 
     public static void teleport(ServerPlayer player, ServerLevel level, double x, double y, double z, float yRot, float xRot) {
         player.teleportTo(level, x, y, z, yRot, xRot);
-    }
-
-    public static CommandSourceStack withPermission(CommandSourceStack source, int level) {
-        return source.withPermission(level);
     }
 
     public static boolean hasPermission(CommandSourceStack source, int level) {

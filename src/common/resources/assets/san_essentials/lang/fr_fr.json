@@ -55,6 +55,7 @@
   "san_essentials.teleport_menu.refresh.description": "§7Recharge les joueurs actuellement en ligne",
   "san_essentials.rtp.cooldown": "§cVeuillez attendre §e%s secondes §cavant de réutiliser cette commande",
   "san_essentials.rtp.success": "§aTéléportation aléatoire effectuée",
+  "san_essentials.rtp.no_safe_location": "§cAucun emplacement de téléportation aléatoire sûr trouvé, veuillez réessayer",
   "san_essentials.rtp.title": "§aTéléporté",
   "san_essentials.rtp.subtitle": "§fSoyez prudent",
   "san_essentials.spawn.success": "§aTéléporté au point d'apparition du monde",

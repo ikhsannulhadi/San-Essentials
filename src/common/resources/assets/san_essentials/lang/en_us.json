@@ -55,6 +55,7 @@
   "san_essentials.teleport_menu.refresh.description": "§7Reload the currently online players",
   "san_essentials.rtp.cooldown": "§cPlease wait §e%s seconds §cbefore using this again",
   "san_essentials.rtp.success": "§aRandom teleport completed",
+  "san_essentials.rtp.no_safe_location": "§cCould not find a safe random teleport location, please try again",
   "san_essentials.rtp.title": "§aTeleported",
   "san_essentials.rtp.subtitle": "§fStay safe",
   "san_essentials.spawn.success": "§aTeleported to the world spawn",
