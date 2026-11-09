@@ -15,7 +15,6 @@ San Essentials is a lightweight essentials mod for Fabric and NeoForge. It adds 
 
 - **Server-side only.** Players don't need to install anything; install it on the client too if you want it in singleplayer.
 - **Every command is configurable.** Toggle commands, set permission levels, adjust RTP distance and cooldowns.
-- **Block griefing protection** against creeper explosions, endermen picking up blocks, and ravagers trampling crops.
 - **Polished feedback.** Clickable accept/deny buttons, titles, sounds, and hover hints instead of plain chat text.
 - **Player picker menus.** `/tpa` and `/tpahere` without a target open a paginated chest menu of online players.
 - **Multilingual.** Messages follow the client's language, with a configurable `fallbackLanguage` (9 languages included).
