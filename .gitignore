@@ -5,6 +5,7 @@ build/
 
 # Minecraft run directories and generated runtime data
 runs/
+.eclipse
 
 # IntelliJ IDEA
 .idea/
