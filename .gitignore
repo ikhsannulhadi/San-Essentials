@@ -46,3 +46,7 @@ desktop.ini
 # Docs
 docs/
 AGENTS.md
+.eclipse/configurations/Client.launch
+.eclipse/configurations/Data.launch
+.eclipse/configurations/GameTestServer.launch
+.eclipse/configurations/Server.launch
