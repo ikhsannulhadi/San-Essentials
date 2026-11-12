@@ -32,6 +32,7 @@ import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.border.WorldBorder;
 
@@ -56,6 +57,7 @@ public final class SanCommands {
     private static final int RTP_FALLBACK_ATTEMPTS = 8;
     private static final int RTP_BORDER_MARGIN = 32;
     private static final int RTP_NETHER_MAX_Y = 126;
+    private static final int RTP_SURFACE_SCAN_DEPTH = 8;
     private static final Map<UUID, Integer> RTP_COOLDOWNS = new HashMap<>();
     private static final Map<UUID, String> LAST_COMMANDS = new HashMap<>();
     private static final List<PendingSound> PENDING_SOUNDS = new ArrayList<>();
@@ -567,6 +569,11 @@ public final class SanCommands {
         int maxY = SanCompat.maxBuildY(level) - 2;
         if (nether) {
             maxY = Math.min(maxY, RTP_NETHER_MAX_Y);
+        } else {
+            // Keep surface RTP on the surface instead of descending into caves.
+            int surfaceY = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+            maxY = Math.min(maxY, surfaceY + 2);
+            minY = Math.max(minY, surfaceY - RTP_SURFACE_SCAN_DEPTH);
         }
 
         for (int y = maxY; y > minY; y--) {
@@ -577,11 +584,11 @@ public final class SanCommands {
             }
 
             BlockPos feetPos = new BlockPos(x, y, z);
-            if (!level.getBlockState(feetPos).isAir()) {
+            if (!isClearForFeet(level.getBlockState(feetPos))) {
                 continue;
             }
 
-            if (!level.getBlockState(feetPos.above()).isAir()) {
+            if (!isClearForFeet(level.getBlockState(feetPos.above()))) {
                 continue;
             }
 
@@ -589,6 +596,24 @@ public final class SanCommands {
         }
 
         return Optional.empty();
+    }
+
+    private static boolean isClearForFeet(BlockState state) {
+        if (state.isAir()) {
+            return true;
+        }
+
+        if (!state.getFluidState().isEmpty()) {
+            return false;
+        }
+
+        if (state.is(BlockTags.FIRE) || state.is(BlockTags.CAMPFIRES)
+                || state.is(Blocks.POWDER_SNOW) || state.is(Blocks.CACTUS)
+                || state.is(Blocks.SWEET_BERRY_BUSH)) {
+            return false;
+        }
+
+        return state.canBeReplaced();
     }
 
     private static boolean isSafeGround(ServerLevel level, BlockPos pos, BlockState state) {
@@ -602,7 +627,7 @@ public final class SanCommands {
             return false;
         }
 
-        return state.isFaceSturdy(level, pos, Direction.UP);
+        return state.isFaceSturdy(level, pos, Direction.UP) || state.is(Blocks.SNOW);
     }
 
     private static int spawn(ServerPlayer player) {

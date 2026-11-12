@@ -17,7 +17,7 @@ Starting with **2.0.0**, development is focused on NeoForge 1.21.1. Older Fabric
 
 - **Server-side friendly.** No client mod is required in multiplayer; installing it on the client is only needed for singleplayer.
 - **Every command is configurable.** Toggle commands, set permission levels, and tune RTP distances and cooldowns.
-- **Safe random teleport.** `/rtp` stays inside the active world border and only teleports to validated ground.
+- **Safe random teleport.** `/rtp` stays inside the active world border and only teleports to validated ground on the surface.
 - **Polished feedback.** Clickable accept/deny buttons, titles, sounds, and hover hints instead of plain chat text.
 - **Player picker menus.** `/tpa` and `/tpahere` without a target open a paginated chest menu of online players.
 - **Warp menu.** `/warps` opens a paginated chest menu of every server warp.
