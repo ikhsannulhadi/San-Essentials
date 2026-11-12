@@ -1,106 +1,45 @@
 plugins {
     id 'java-library'
     id 'idea'
-    id 'net.neoforged.moddev' version '2.0.141' apply false
-    id 'fabric-loom' version '1.11.8' apply false
-    id 'net.fabricmc.fabric-loom' version '1.16.3' apply false
+    id 'net.neoforged.moddev' version '2.0.141'
 }
 
 version = mod_version
 group = mod_group_id
 
 def effectiveModId = mod_id.toString()
-def target_loader = (findProperty('target_loader') ?: 'neoforge').toString()
-def target_minecraft_version = (findProperty('target_minecraft_version') ?: minecraft_version).toString()
-def dev_player_name = (findProperty('dev_player_name') ?: 'Dev').toString()
+def effectiveMinecraftVersion = minecraft_version.toString()
+def effectiveMinecraftVersionRange = (findProperty('minecraft_version_range') ?: "[${effectiveMinecraftVersion}]").toString()
+def effectiveNeoVersion = neo_version.toString()
+def effectiveNeoVersionRange = (findProperty('neo_version_range') ?: "[${effectiveNeoVersion},)").toString()
+def effectiveLoaderVersionRange = (findProperty('loader_version_range') ?: '[4,)').toString()
+def effectiveParchmentMappingsVersion = (findProperty('parchment_mappings_version') ?: '').toString()
+def effectiveSparkVersion = neoforge_spark_version.toString()
+def effectiveDevPlayerName = (findProperty('dev_player_name') ?: 'Dev').toString()
+def effectiveTargetJavaVersion = (findProperty('target_java_version') ?: '21').toInteger()
 def sharedBuildRoot = layout.projectDirectory.dir('build')
-layout.buildDirectory = sharedBuildRoot.dir("work/${target_loader}/${target_minecraft_version}")
-def propertyKeyForVersion = { String minecraftVersion, String propertyName ->
-    "mc_${minecraftVersion.replaceAll(/[^A-Za-z0-9]/, '_')}_${propertyName}"
-}
-def versionedProperty = { String propertyName, String fallbackPropertyName = propertyName, String defaultValue = null ->
-    String versionKey = propertyKeyForVersion(target_minecraft_version, propertyName)
-    if (project.hasProperty(versionKey)) {
-        return project.property(versionKey).toString()
-    }
-    if (fallbackPropertyName != null && project.hasProperty(fallbackPropertyName)) {
-        return project.property(fallbackPropertyName).toString()
-    }
-    return defaultValue
-}
-def defaultTargetJavaVersion = { String minecraftVersion ->
-    def parts = minecraftVersion.tokenize('.').collect { part ->
-        def digits = part.takeWhile { it >= '0' && it <= '9' }
-        digits.isBlank() ? 0 : digits.toInteger()
-    }
-    int major = parts.size() > 0 ? parts[0] : 0
-    int minor = parts.size() > 1 ? parts[1] : 0
-    major > 26 || (major == 26 && minor >= 1) ? 25 : 21
-}
-def minecraftVersionPart = { String minecraftVersion, int index ->
-    def parts = minecraftVersion.tokenize('.').collect { part ->
-        def digits = part.takeWhile { it >= '0' && it <= '9' }
-        digits.isBlank() ? 0 : digits.toInteger()
-    }
-    return parts.size() > index ? parts[index] : 0
-}
-def isMinecraftAtLeast = { String minecraftVersion, int major, int minor ->
-    int actualMajor = minecraftVersionPart(minecraftVersion, 0)
-    int actualMinor = minecraftVersionPart(minecraftVersion, 1)
-    return actualMajor > major || (actualMajor == major && actualMinor >= minor)
-}
-def defaultMinecraftVersionRange = { String minecraftVersion ->
-    int major = minecraftVersionPart(minecraftVersion, 0)
-    int minor = minecraftVersionPart(minecraftVersion, 1)
-    "[${minecraftVersion},${major}.${minor + 1})"
-}
-def defaultFabricMinecraftVersionRange = { String minecraftVersion ->
-    int major = minecraftVersionPart(minecraftVersion, 0)
-    int minor = minecraftVersionPart(minecraftVersion, 1)
-    ">=${minecraftVersion} <${major}.${minor + 1}"
-}
-def target_java_version = (findProperty('target_java_version')
-        ?: versionedProperty('target_java_version', null, defaultTargetJavaVersion(target_minecraft_version).toString())).toString()
-def isNeoForge = target_loader == 'neoforge'
-def isFabric = target_loader == 'fabric'
-def usesModernFabricBuild = isFabric && isMinecraftAtLeast(target_minecraft_version, 26, 1)
-def effectiveMinecraftVersionRange = versionedProperty('minecraft_version_range', 'minecraft_version_range', defaultMinecraftVersionRange(target_minecraft_version))
-def effectiveFabricMinecraftVersionRange = versionedProperty('fabric_minecraft_version_range', 'fabric_minecraft_version_range', defaultFabricMinecraftVersionRange(target_minecraft_version))
-def effectiveNeoVersion = versionedProperty('neo_version')
-def effectiveNeoVersionRange = versionedProperty('neo_version_range')
-def effectiveLoaderVersionRange = versionedProperty('loader_version_range')
-def effectiveFabricLoaderVersion = versionedProperty('fabric_loader_version')
-def effectiveFabricLoaderMinVersion = versionedProperty('fabric_loader_min_version', 'fabric_loader_min_version', effectiveFabricLoaderVersion)
-def effectiveFabricApiVersion = versionedProperty('fabric_api_version')
-def effectiveFabricApiMinVersion = versionedProperty('fabric_api_min_version', 'fabric_api_min_version', effectiveFabricApiVersion)
-def effectiveParchmentMinecraftVersion = versionedProperty('parchment_minecraft_version', 'parchment_minecraft_version', target_minecraft_version)
-def effectiveParchmentMappingsVersion = versionedProperty('parchment_mappings_version', 'parchment_mappings_version', '')
-def effectiveSparkVersion = versionedProperty("${target_loader}_spark_version")
-def effectiveModMenuVersion = isFabric ? versionedProperty('mod_menu_version') : null
-def effectiveFabricPermissionsApiVersion = isFabric ? versionedProperty('fabric_permissions_api_version') : null
-def mixinCompatibilityLevel = "JAVA_${target_java_version}"
-def ensureRunDirectory = { String path ->
-    def directory = project.file(path)
+def runDirectory = { String name ->
+    def directory = file("runs/neoforge/${effectiveMinecraftVersion}/${name}")
     directory.mkdirs()
     return directory
 }
-def runDirectoryPath = { String loaderName, String runName ->
-    "runs/${loaderName}/${target_minecraft_version}/${runName}"
-}
-def runDirectory = { String loaderName, String runName ->
-    ensureRunDirectory(runDirectoryPath(loaderName, runName))
+
+base {
+    archivesName = "${effectiveModId}-neoforge-${effectiveMinecraftVersion}"
 }
 
-if (isNeoForge) {
-    apply plugin: 'net.neoforged.moddev'
-} else if (isFabric) {
-    apply plugin: usesModernFabricBuild ? 'net.fabricmc.fabric-loom' : 'fabric-loom'
-} else {
-    throw new GradleException("Unsupported target_loader: ${target_loader}")
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(gradle_java_version.toInteger())
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = effectiveTargetJavaVersion
+    options.encoding = 'UTF-8'
 }
 
 repositories {
     mavenLocal()
+    mavenCentral()
     maven {
         name = 'Modrinth'
         url = uri('https://api.modrinth.com/maven')
@@ -108,34 +47,97 @@ repositories {
             includeGroup 'maven.modrinth'
         }
     }
-    if (isFabric) {
-        maven { url = 'https://maven.fabricmc.net/' }
-        mavenCentral()
+}
+
+neoForge {
+    version = effectiveNeoVersion
+
+    if (!effectiveParchmentMappingsVersion.isBlank()) {
+        parchment {
+            mappingsVersion = effectiveParchmentMappingsVersion
+            minecraftVersion = effectiveMinecraftVersion
+        }
+    }
+
+    runs {
+        client {
+            client()
+            gameDirectory = runDirectory('client')
+            programArguments.addAll '--username', effectiveDevPlayerName
+            systemProperty 'neoforge.enabledGameTestNamespaces', effectiveModId
+        }
+
+        server {
+            server()
+            gameDirectory = runDirectory('server')
+            programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', effectiveModId
+        }
+
+        gameTestServer {
+            type = 'gameTestServer'
+            gameDirectory = runDirectory('gameTestServer')
+            systemProperty 'neoforge.enabledGameTestNamespaces', effectiveModId
+        }
+
+        data {
+            data()
+            gameDirectory = runDirectory('data')
+            programArguments.addAll '--mod', effectiveModId, '--all',
+                    '--output', file('src/generated/resources/').getAbsolutePath(),
+                    '--existing', file('src/common/resources/').getAbsolutePath()
+        }
+
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+    }
+
+    mods {
+        "${effectiveModId}" {
+            sourceSet(sourceSets.main)
+        }
     }
 }
 
-base {
-    archivesName = "${mod_id}-${target_loader}-${target_minecraft_version}"
+tasks.matching { it.name == 'createMinecraftArtifacts' }.configureEach {
+    def gradleJavaExecutable = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(gradle_java_version.toInteger())
+    }.map { launcher -> launcher.executablePath.asFile.absolutePath }
+    javaExecutable.set(gradleJavaExecutable)
+    toolsJavaExecutable.set(gradleJavaExecutable)
 }
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(gradle_java_version.toInteger())
-
-tasks.withType(JavaCompile).configureEach {
-    inputs.property('sanTargetLoader', target_loader)
-    inputs.property('sanTargetMinecraftVersion', target_minecraft_version)
-    options.release = target_java_version.toInteger()
+sourceSets {
+    main {
+        java {
+            setSrcDirs([
+                    'src/common/java',
+                    "src/versions/${effectiveMinecraftVersion}/common/java",
+                    'src/loaders/neoforge/java',
+                    "src/versions/${effectiveMinecraftVersion}/neoforge/java"
+            ])
+        }
+        resources {
+            setSrcDirs([
+                    'src/common/resources',
+                    "src/versions/${effectiveMinecraftVersion}/common/resources",
+                    'src/loaders/neoforge/resources',
+                    "src/versions/${effectiveMinecraftVersion}/neoforge/resources",
+                    'src/generated/resources'
+            ])
+            exclude '**/.gitkeep'
+        }
+    }
 }
 
-tasks.withType(ProcessResources).configureEach {
-    inputs.property('sanTargetLoader', target_loader)
-    inputs.property('sanTargetMinecraftVersion', target_minecraft_version)
+dependencies {
+    runtimeOnly "maven.modrinth:spark:${effectiveSparkVersion}"
 }
 
-def finalArchiveTaskName = isFabric && !usesModernFabricBuild ? 'remapJar' : 'jar'
-tasks.matching { task ->
-    task.name == finalArchiveTaskName
-}.configureEach {
-    destinationDirectory = sharedBuildRoot.dir('libs')
+tasks.withType(JavaExec).configureEach {
+    standardInput = System.in
 }
 
 tasks.named('clean', Delete).configure {
@@ -148,145 +150,17 @@ tasks.named('clean', Delete).configure {
     delete sharedBuildRoot.dir('reports')
 }
 
-tasks.withType(JavaExec).configureEach {
-    standardInput = System.in
+tasks.named('jar').configure {
+    destinationDirectory = sharedBuildRoot.dir('libs')
 }
 
-if (isNeoForge) {
-neoForge {
-    version = effectiveNeoVersion
-
-    if (!effectiveParchmentMappingsVersion.isBlank()) {
-        parchment {
-            mappingsVersion = effectiveParchmentMappingsVersion
-            minecraftVersion = effectiveParchmentMinecraftVersion
-        }
-    }
-
-    runs {
-        client {
-            client()
-            gameDirectory = runDirectory('neoforge', 'client')
-            programArguments.addAll '--username', dev_player_name
-
-            systemProperty 'neoforge.enabledGameTestNamespaces', effectiveModId
-        }
-
-        server {
-            server()
-            gameDirectory = runDirectory('neoforge', 'server')
-            programArgument '--nogui'
-            systemProperty 'neoforge.enabledGameTestNamespaces', effectiveModId
-        }
-
-        gameTestServer {
-            type = "gameTestServer"
-            gameDirectory = runDirectory('neoforge', 'gameTestServer')
-            systemProperty 'neoforge.enabledGameTestNamespaces', effectiveModId
-        }
-
-        data {
-            data()
-            gameDirectory = runDirectory('neoforge', 'data')
-
-            programArguments.addAll '--mod', effectiveModId, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/common/resources/').getAbsolutePath()
-        }
-
-        configureEach {
-            systemProperty 'forge.logging.markers', 'REGISTRIES'
-            logLevel = org.slf4j.event.Level.DEBUG
-        }
-    }
-
-    mods {
-        "${mod_id}" {
-            sourceSet(sourceSets.main)
-        }
-    }
-}
-}
-
-if (isNeoForge) {
-    tasks.matching { it.name == 'createMinecraftArtifacts' }.configureEach {
-        def gradleJavaExecutable = javaToolchains.launcherFor {
-            languageVersion = JavaLanguageVersion.of(gradle_java_version.toInteger())
-        }.map { launcher -> launcher.executablePath.asFile.absolutePath }
-        javaExecutable.set(gradleJavaExecutable)
-        toolsJavaExecutable.set(gradleJavaExecutable)
-    }
-}
-
-if (isFabric) {
-loom {
-    runs {
-        client {
-            def clientRunDirectory = runDirectoryPath('fabric', 'client')
-            ensureRunDirectory(clientRunDirectory)
-            runDir clientRunDirectory
-            programArgs '--username', dev_player_name
-        }
-        server {
-            def serverRunDirectory = runDirectoryPath('fabric', 'server')
-            ensureRunDirectory(serverRunDirectory)
-            runDir serverRunDirectory
-        }
-    }
-}
-}
-
-sourceSets {
-    main {
-        java {
-            setSrcDirs([
-                    'src/common/java',
-                    "src/versions/${target_minecraft_version}/common/java",
-                    "src/loaders/${target_loader}/java",
-                    "src/versions/${target_minecraft_version}/${target_loader}/java"
-            ])
-        }
-        resources {
-            setSrcDirs([
-                    'src/common/resources',
-                    "src/versions/${target_minecraft_version}/common/resources",
-                    "src/loaders/${target_loader}/resources",
-                    "src/versions/${target_minecraft_version}/${target_loader}/resources",
-                    'src/generated/resources'
-            ])
-            exclude '**/.gitkeep'
-        }
-    }
-}
-
-
-dependencies {
-    if (isNeoForge) {
-        runtimeOnly "maven.modrinth:spark:${effectiveSparkVersion}"
-    }
-
-    if (isFabric) {
-        minecraft "com.mojang:minecraft:${target_minecraft_version}"
-        if (!usesModernFabricBuild) {
-            mappings loom.officialMojangMappings()
-        }
-        def fabricDependencyConfiguration = usesModernFabricBuild ? 'implementation' : 'modImplementation'
-        add(fabricDependencyConfiguration, "net.fabricmc:fabric-loader:${effectiveFabricLoaderVersion}")
-        add(fabricDependencyConfiguration, "net.fabricmc.fabric-api:fabric-api:${effectiveFabricApiVersion}")
-
-        def fabricLocalRuntimeConfiguration = usesModernFabricBuild ? 'localRuntime' : 'modLocalRuntime'
-        add(fabricLocalRuntimeConfiguration, "maven.modrinth:spark:${effectiveSparkVersion}")
-        add(fabricLocalRuntimeConfiguration, "maven.modrinth:fabric-permissions-api:${effectiveFabricPermissionsApiVersion}")
-        add(fabricLocalRuntimeConfiguration, "maven.modrinth:modmenu:${effectiveModMenuVersion}")
-    }
-}
-
-if (isNeoForge) {
-var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
-    var replaceProperties = [minecraft_version      : target_minecraft_version,
+var generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
+    var replaceProperties = [minecraft_version      : effectiveMinecraftVersion,
                              minecraft_version_range: effectiveMinecraftVersionRange,
                              neo_version            : effectiveNeoVersion,
                              neo_version_range      : effectiveNeoVersionRange,
                              loader_version_range   : effectiveLoaderVersionRange,
-                             mod_id                 : mod_id,
+                             mod_id                 : effectiveModId,
                              mod_name               : mod_name,
                              mod_license            : mod_license,
                              mod_version            : mod_version,
@@ -294,75 +168,16 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
                              mod_description        : mod_description]
     inputs.properties replaceProperties
     expand replaceProperties
-    from "src/loaders/neoforge/templates"
-    into layout.buildDirectory.dir("generated/sources/modMetadata")
+    from 'src/loaders/neoforge/templates'
+    into layout.buildDirectory.dir('generated/sources/modMetadata')
 }
 sourceSets.main.resources.srcDir generateModMetadata
-// To avoid having to run "generateModMetadata" manually, make it run on every project reload
 neoForge.ideSyncTask generateModMetadata
-}
-
-if (isFabric) {
-    tasks.named('processResources', ProcessResources).configure {
-        var replaceProperties = [minecraft_version             : target_minecraft_version,
-                                 fabric_minecraft_version_range: effectiveFabricMinecraftVersionRange,
-                                 fabric_loader_min_version    : effectiveFabricLoaderMinVersion,
-                                 fabric_api_min_version       : effectiveFabricApiMinVersion,
-                                 target_java_version          : target_java_version,
-                                 mixin_compatibility_level    : mixinCompatibilityLevel,
-                                 mod_id                       : mod_id,
-                                 mod_name                     : mod_name,
-                                 mod_license                  : mod_license,
-                                 mod_version                  : mod_version,
-                                 mod_authors                  : mod_authors,
-                                 mod_description              : mod_description]
-        inputs.properties replaceProperties
-        filesMatching(['fabric.mod.json', 'san_essentials.mixins.json']) {
-            expand replaceProperties
-        }
-    }
-}
 
 tasks.register('buildNeoForge') {
     group = 'build'
-    description = 'Builds the NeoForge jar for the configured Minecraft version.'
+    description = 'Builds the NeoForge 1.21.1 jar.'
     dependsOn tasks.named('build')
-}
-
-def buildFabricDelegated = isFabric ? null : tasks.register('buildFabricDelegated', Exec) {
-    notCompatibleWithConfigurationCache('Runs a separate Fabric-targeted Gradle invocation.')
-    def gradleWrapper = System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows') ? 'gradlew.bat' : 'gradlew'
-    commandLine project.file(gradleWrapper).absolutePath, '-Ptarget_loader=fabric', "-Ptarget_minecraft_version=${target_minecraft_version}", 'build', '--no-daemon', '--no-configuration-cache'
-}
-
-def delegatedGradleTask = { String name, String taskName, String loader ->
-    tasks.register(name, Exec) {
-        group = 'minecraft runs'
-        description = "Runs ${taskName} for the ${loader} target."
-        notCompatibleWithConfigurationCache('Runs a separate loader-targeted Gradle invocation.')
-        def gradleWrapper = System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows') ? 'gradlew.bat' : 'gradlew'
-        commandLine project.file(gradleWrapper).absolutePath, "-Ptarget_loader=${loader}", "-Ptarget_minecraft_version=${target_minecraft_version}", taskName, '--no-daemon', '--no-configuration-cache'
-        standardInput = System.in
-    }
-}
-
-if (isNeoForge) {
-    delegatedGradleTask('runNeoForgeClient', 'runClient', 'neoforge')
-    delegatedGradleTask('runNeoForgeServer', 'runServer', 'neoforge')
-    delegatedGradleTask('runNeoForgeGameTestServer', 'runGameTestServer', 'neoforge')
-    delegatedGradleTask('runNeoForgeData', 'runData', 'neoforge')
-    delegatedGradleTask('runFabricClient', 'runClient', 'fabric')
-    delegatedGradleTask('runFabricServer', 'runServer', 'fabric')
-}
-
-tasks.register('buildFabric') {
-    group = 'build'
-    description = 'Builds the Fabric jar for the configured Minecraft version.'
-    if (isFabric) {
-        dependsOn tasks.named('build')
-    } else {
-        dependsOn buildFabricDelegated
-    }
 }
 
 idea {

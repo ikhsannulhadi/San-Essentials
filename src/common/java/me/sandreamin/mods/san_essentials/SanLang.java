@@ -29,6 +29,7 @@ public final class SanLang {
             "zh_tw", load("zh_tw"),
             "zh_hk", load("zh_tw"),
             "en_us", load("en_us"),
+            "id_id", load("id_id"),
             "ru_ru", load("ru_ru"),
             "de_de", load("de_de"),
             "fr_fr", load("fr_fr"),

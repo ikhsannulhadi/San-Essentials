@@ -12,7 +12,7 @@ public final class SanConfig {
     private static final String DEFAULT_VALUE_COMMENT_PREFIX = " Default: ";
 
     private static final Set<String> SUPPORTED_LANGUAGES = Set.of(
-            "en_us", "zh_cn", "zh_tw", "zh_hk", "ru_ru", "de_de", "fr_fr", "ja_jp", "ko_kr"
+            "en_us", "id_id", "zh_cn", "zh_tw", "zh_hk", "ru_ru", "de_de", "fr_fr", "ja_jp", "ko_kr"
     );
 
     private static final ValueDefinition FALLBACK_LANGUAGE = stringValue(
@@ -21,7 +21,7 @@ public final class SanConfig {
             SUPPORTED_LANGUAGES,
             " Fallback language used by the server when the player's client language is unsupported.",
             " This prevents clients without the mod installed from seeing untranslated localization keys.",
-            " Supported values: en_us, zh_cn, zh_tw, zh_hk, ru_ru, de_de, fr_fr, ja_jp, ko_kr"
+            " Supported values: en_us, id_id, zh_cn, zh_tw, zh_hk, ru_ru, de_de, fr_fr, ja_jp, ko_kr"
     );
     private static final ValueDefinition MESSAGE_PREFIX_ENABLED = booleanValue(
             "messagePrefixEnabled",
@@ -90,6 +90,22 @@ public final class SanConfig {
             30000000,
             " Maximum distance from the current position for /rtp in the Nether."
     );
+    private static final ValueDefinition RTP_END_MIN_DISTANCE = intValue(
+            "rtpEndMinDistance",
+            -1,
+            -1,
+            30000000,
+            " Minimum distance from the current position for /rtp in the End.",
+            " Use -1 to reuse rtpMinDistance."
+    );
+    private static final ValueDefinition RTP_END_MAX_DISTANCE = intValue(
+            "rtpEndMaxDistance",
+            -1,
+            -1,
+            30000000,
+            " Maximum distance from the current position for /rtp in the End.",
+            " Use -1 to reuse rtpMaxDistance."
+    );
     private static final ValueDefinition TELEPORT_REQUEST_TIMEOUT_SECONDS = intValue(
             "teleportRequestTimeoutSeconds",
             60,
@@ -116,6 +132,8 @@ public final class SanConfig {
             RTP_MAX_DISTANCE,
             RTP_NETHER_MIN_DISTANCE,
             RTP_NETHER_MAX_DISTANCE,
+            RTP_END_MIN_DISTANCE,
+            RTP_END_MAX_DISTANCE,
             TELEPORT_REQUEST_TIMEOUT_SECONDS,
             ALLOW_SELF_TELEPORT_REQUESTS
     );
@@ -127,8 +145,8 @@ public final class SanConfig {
             " Command settings.",
             " enabled: whether the command is registered when the server starts. Changes require a server restart.",
             " permissionLevel: required OP permission level. Use 0 to allow everyone. Changes apply without restart.",
-            " Derived commands are not configured separately: tpaa, tpad, and tpaauto follow tpa;",
-            " tpaherea and tpahered follow tpahere; dback follows back.",
+            " Derived commands are not configured separately: tpaa, tpad, tpaauto, tpaccept, tpyes, tpdeny, tpno follow tpa;",
+            " tpaherea and tpahered follow tpahere; dback follows back; warps follows warp.",
             " TPA and TPAhere requests require the target to have access to both matching accept and deny commands.",
             " Stored TPA auto-accept state only applies while the tpaauto command is enabled and accessible."
     );
@@ -160,13 +178,18 @@ public final class SanConfig {
             COMMANDS.stream().map(CommandDefinition::name).toList()
     );
 
-    private static final Map<String, String> DERIVED_COMMANDS = Map.of(
-            "tpaa", "tpa",
-            "tpad", "tpa",
-            "tpaauto", "tpa",
-            "tpaherea", "tpahere",
-            "tpahered", "tpahere",
-            "dback", "back"
+    private static final Map<String, String> DERIVED_COMMANDS = Map.ofEntries(
+            Map.entry("tpaa", "tpa"),
+            Map.entry("tpad", "tpa"),
+            Map.entry("tpaauto", "tpa"),
+            Map.entry("tpaccept", "tpa"),
+            Map.entry("tpyes", "tpa"),
+            Map.entry("tpdeny", "tpa"),
+            Map.entry("tpno", "tpa"),
+            Map.entry("tpaherea", "tpahere"),
+            Map.entry("tpahered", "tpahere"),
+            Map.entry("dback", "back"),
+            Map.entry("warps", "warp")
     );
 
     private SanConfig() {
@@ -222,6 +245,16 @@ public final class SanConfig {
 
     public static int rtpNetherMaxDistance() {
         return Math.max(SanConfigBackend.intValue(RTP_NETHER_MAX_DISTANCE), rtpNetherMinDistance() + 1);
+    }
+
+    public static int rtpEndMinDistance() {
+        int value = SanConfigBackend.intValue(RTP_END_MIN_DISTANCE);
+        return value < 0 ? rtpMinDistance() : value;
+    }
+
+    public static int rtpEndMaxDistance() {
+        int value = SanConfigBackend.intValue(RTP_END_MAX_DISTANCE);
+        return value < 0 ? rtpMaxDistance() : Math.max(value, rtpEndMinDistance() + 1);
     }
 
     public static int teleportRequestTimeoutSeconds() {

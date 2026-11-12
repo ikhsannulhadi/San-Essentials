@@ -13,6 +13,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ResolvableProfile;
+import net.minecraft.world.level.Level;
 
 /**
  * Isolates Minecraft 1.21.1 API calls from the shared command and event code.
@@ -30,15 +31,16 @@ public final class SanCompat {
     }
 
     public static ServerLevel spawnLevel(ServerPlayer player) {
-        return level(player);
+        ServerLevel overworld = server(player).getLevel(Level.OVERWORLD);
+        return overworld != null ? overworld : level(player);
     }
 
     public static BlockPos spawnPos(ServerPlayer player) {
-        return level(player).getSharedSpawnPos();
+        return spawnLevel(player).getSharedSpawnPos();
     }
 
     public static float spawnAngle(ServerPlayer player) {
-        return level(player).getSharedSpawnAngle();
+        return spawnLevel(player).getSharedSpawnAngle();
     }
 
     public static int minBuildY(ServerLevel level) {
@@ -88,22 +90,15 @@ public final class SanCompat {
     }
 
     @SuppressWarnings("deprecation")
+    public static boolean hasFlightAbility(ServerPlayer player) {
+        return player.getAbilities().mayfly;
+    }
+
+    @SuppressWarnings("deprecation")
     public static void restoreFlight(ServerPlayer player, boolean wasFlying) {
-        restoreFlight(player, wasFlying, true);
-    }
-
-    @SuppressWarnings("deprecation")
-    public static void restoreFlightSilently(ServerPlayer player, boolean wasFlying) {
-        restoreFlight(player, wasFlying, false);
-    }
-
-    @SuppressWarnings("deprecation")
-    private static void restoreFlight(ServerPlayer player, boolean wasFlying, boolean sync) {
         player.getAbilities().mayfly = true;
         player.getAbilities().flying = wasFlying || player.getAbilities().flying;
-        if (sync) {
-            player.onUpdateAbilities();
-        }
+        player.onUpdateAbilities();
     }
 
     public static ClickEvent runCommandClick(String command) {
@@ -120,6 +115,10 @@ public final class SanCompat {
 
     public static void openTeleportMenu(ServerPlayer player, boolean here, int page) {
         SanTeleportMenu.open(player, here, page);
+    }
+
+    public static void openWarpMenu(ServerPlayer player, int page) {
+        SanWarpMenu.open(player, page);
     }
 
     public static void setPlayerHeadProfile(ItemStack head, ServerPlayer player) {

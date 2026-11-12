@@ -49,6 +49,13 @@ public final class SanEvents {
     }
 
     @SubscribeEvent
+    public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            SanRuntimeEvents.onPlayerLogout(player);
+        }
+    }
+
+    @SubscribeEvent
     public static void onPlayerTeleport(EntityTeleportEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             SanPlayerData.get(SanCompat.server(player)).setTeleportBack(

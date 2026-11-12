@@ -86,6 +86,12 @@ public final class SanCommands {
                     .requires(source -> canUse(source, "tpaauto"))
                     .executes(context -> tpaAuto(context.getSource().getPlayerOrException())));
         }
+        if (enabled("tpa")) {
+            registerTpaAlias(dispatcher, "tpaccept", true);
+            registerTpaAlias(dispatcher, "tpyes", true);
+            registerTpaAlias(dispatcher, "tpdeny", false);
+            registerTpaAlias(dispatcher, "tpno", false);
+        }
 
         if (enabled("tpahere")) {
             dispatcher.register(Commands.literal("tpahere")
@@ -203,6 +209,11 @@ public final class SanCommands {
                             .suggests(SanCommands::suggestWarps)
                             .executes(context -> warp(context.getSource().getPlayerOrException(), StringArgumentType.getString(context, "name")))));
         }
+        if (enabled("warps")) {
+            dispatcher.register(Commands.literal("warps")
+                    .requires(source -> canUse(source, "warps"))
+                    .executes(context -> openWarpMenu(context.getSource().getPlayerOrException())));
+        }
         if (enabled("setwarp")) {
             dispatcher.register(Commands.literal("setwarp")
                     .requires(source -> canUse(source, "setwarp"))
@@ -271,12 +282,18 @@ public final class SanCommands {
         }
     }
 
+    public static void forgetPlayer(ServerPlayer player) {
+        UUID playerId = player.getUUID();
+        LAST_COMMANDS.remove(playerId);
+        PENDING_SOUNDS.removeIf(sound -> sound.player().equals(playerId));
+    }
+
     public static boolean isFlyEnabled(ServerPlayer player) {
         return SanPlayerData.get(SanCompat.server(player)).isFlyEnabled(player.getUUID());
     }
 
     public static void restoreFly(ServerPlayer player) {
-        if (isFlyEnabled(player)) {
+        if (isFlyEnabled(player) && !SanCompat.hasFlightAbility(player)) {
             setMayFly(player, true);
         }
     }
@@ -304,6 +321,18 @@ public final class SanCommands {
     private static int openTeleportMenu(ServerPlayer player, TeleportRequestType type) {
         SanCompat.openTeleportMenu(player, type == TeleportRequestType.TPAHERE, 0);
         return 1;
+    }
+
+    private static void registerTpaAlias(CommandDispatcher<CommandSourceStack> dispatcher, String alias, boolean accept) {
+        if (dispatcher.getRoot().getChild(alias) != null) {
+            return;
+        }
+
+        dispatcher.register(Commands.literal(alias)
+                .requires(source -> canUse(source, alias))
+                .executes(context -> accept
+                        ? acceptTpa(context.getSource().getPlayerOrException())
+                        : denyTpa(context.getSource().getPlayerOrException())));
     }
 
     private static int acceptTpa(ServerPlayer target) {
@@ -495,8 +524,11 @@ public final class SanCommands {
         }
 
         boolean nether = level.dimension() == Level.NETHER;
-        int minDistance = nether ? SanConfig.rtpNetherMinDistance() : SanConfig.rtpMinDistance();
-        int maxDistance = nether ? SanConfig.rtpNetherMaxDistance() : SanConfig.rtpMaxDistance();
+        boolean end = level.dimension() == Level.END;
+        int minDistance = nether ? SanConfig.rtpNetherMinDistance()
+                : end ? SanConfig.rtpEndMinDistance() : SanConfig.rtpMinDistance();
+        int maxDistance = nether ? SanConfig.rtpNetherMaxDistance()
+                : end ? SanConfig.rtpEndMaxDistance() : SanConfig.rtpMaxDistance();
         double minDistanceSquared = (double) minDistance * minDistance;
         double maxDistanceSquared = (double) maxDistance * maxDistance;
 
@@ -721,7 +753,15 @@ public final class SanCommands {
     }
 
     private static int suicide(ServerPlayer player) {
-        SanCompat.kill(player);
+        SanRuntimeEvents.allowNextDamage(player);
+        try {
+            SanCompat.kill(player);
+        } finally {
+            SanRuntimeEvents.clearForcedDamage(player);
+        }
+        if (!player.isDeadOrDying()) {
+            return 0;
+        }
         for (ServerPlayer target : SanCompat.server(player).getPlayerList().getPlayers()) {
             send(target, "san_essentials.suicide.broadcast", player.getName());
         }
@@ -753,6 +793,20 @@ public final class SanCommands {
         return 0;
     }
 
+    private static int openWarpMenu(ServerPlayer player) {
+        if (SanPlayerData.get(SanCompat.server(player)).warpNames().isEmpty()) {
+            send(player, "san_essentials.warps.none");
+            return 0;
+        }
+
+        SanCompat.openWarpMenu(player, 0);
+        return 1;
+    }
+
+    static boolean requestWarpFromMenu(ServerPlayer player, String name) {
+        return warp(player, name) > 0;
+    }
+
     private static int setWarp(ServerPlayer player, String name) {
         SanPlayerData.get(SanCompat.server(player)).setWarp(name, SanLocation.of(player));
         send(player, "san_essentials.setwarp.success", name);
@@ -777,7 +831,8 @@ public final class SanCommands {
                 helpCommand("tpaherea"), helpCommand("tpahered"),
                 helpCommand("back"), helpCommand("dback"), helpCommand("tback"), helpCommand("spawn"), helpCommand("rtp"));
         sendHelpLine(player, source, "san_essentials.help.home",
-                helpCommand("home"), helpCommand("homes"), helpCommand("sethome"), helpCommand("delhome"), helpCommand("warp"));
+                helpCommand("home"), helpCommand("homes"), helpCommand("sethome"), helpCommand("delhome"),
+                helpCommand("warp"), helpCommand("warps"));
         sendHelpLine(player, source, "san_essentials.help.utility",
                 helpCommand("suicide"), helpCommand("trash"));
         sendHelpLine(player, source, "san_essentials.help.op",
@@ -907,6 +962,11 @@ public final class SanCommands {
         Optional<ServerLevel> level = location.resolve(SanCompat.server(player));
         if (level.isEmpty()) {
             send(player, "san_essentials.teleport.missing_dimension");
+            return false;
+        }
+
+        if (!level.get().getWorldBorder().isWithinBounds(location.x(), location.z())) {
+            send(player, "san_essentials.teleport.outside_border");
             return false;
         }
 

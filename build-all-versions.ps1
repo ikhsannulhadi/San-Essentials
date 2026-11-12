@@ -1,8 +1,8 @@
 [CmdletBinding()]
 param(
-    [string[]] $MinecraftVersion = @(),
-    [ValidateSet('neoforge', 'fabric')]
-    [string[]] $Loader = @('neoforge', 'fabric'),
+    [string[]] $MinecraftVersion = @('1.21.1'),
+    [ValidateSet('neoforge')]
+    [string[]] $Loader = @('neoforge'),
     [switch] $Clean,
     [switch] $ContinueOnError,
     [string[]] $GradleArgs = @()
@@ -96,7 +96,6 @@ if ($versions.Count -eq 0) {
 
 $taskByLoader = @{
     neoforge = 'buildNeoForge'
-    fabric = 'buildFabric'
 }
 $baseGradleArgs = @('--no-daemon', '--no-configuration-cache') + @($GradleArgs)
 $failures = New-Object System.Collections.Generic.List[object]

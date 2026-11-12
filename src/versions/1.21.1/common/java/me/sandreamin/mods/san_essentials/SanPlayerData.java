@@ -76,7 +76,10 @@ public class SanPlayerData extends SanPlayerDataStore {
     private void readLocationMap(ListTag list, Map<UUID, SanLocation> target) {
         for (int i = 0; i < list.size(); i++) {
             CompoundTag entry = list.getCompound(i);
-            target.put(entry.getUUID("uuid"), SanLocation.load(entry.getCompound("location")));
+            UUID uuid = entry.getUUID("uuid");
+            if (uuid != null) {
+                target.put(uuid, SanLocation.load(entry.getCompound("location")));
+            }
         }
     }
 
@@ -94,10 +97,15 @@ public class SanPlayerData extends SanPlayerDataStore {
     private void readHomeMap(ListTag list, Map<UUID, Map<String, SanLocation>> target) {
         for (int i = 0; i < list.size(); i++) {
             CompoundTag entry = list.getCompound(i);
+            UUID uuid = entry.getUUID("uuid");
+            if (uuid == null) {
+                continue;
+            }
+
             Map<String, SanLocation> owned = new HashMap<>();
             readNamedLocationMap(entry.getList("homes", Tag.TAG_COMPOUND), owned);
             if (!owned.isEmpty()) {
-                target.put(entry.getUUID("uuid"), owned);
+                target.put(uuid, owned);
             }
         }
     }
@@ -116,7 +124,10 @@ public class SanPlayerData extends SanPlayerDataStore {
     private void readNamedLocationMap(ListTag list, Map<String, SanLocation> target) {
         for (int i = 0; i < list.size(); i++) {
             CompoundTag entry = list.getCompound(i);
-            target.put(entry.getString("name"), SanLocation.load(entry.getCompound("location")));
+            String name = entry.getString("name");
+            if (!name.isEmpty()) {
+                target.put(name, SanLocation.load(entry.getCompound("location")));
+            }
         }
     }
 
@@ -133,7 +144,10 @@ public class SanPlayerData extends SanPlayerDataStore {
 
     private void readUuidSet(ListTag list, Set<UUID> target) {
         for (int i = 0; i < list.size(); i++) {
-            target.add(list.getCompound(i).getUUID("uuid"));
+            UUID uuid = list.getCompound(i).getUUID("uuid");
+            if (uuid != null) {
+                target.add(uuid);
+            }
         }
     }
 

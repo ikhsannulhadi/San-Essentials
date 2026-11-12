@@ -31,7 +31,10 @@ public record SanLocation(ResourceKey<Level> level, double x, double y, double z
     }
 
     public static SanLocation load(CompoundTag tag) {
-        ResourceKey<Level> level = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(tag.getString("level")));
+        ResourceLocation levelId = ResourceLocation.tryParse(tag.getString("level"));
+        ResourceKey<Level> level = levelId == null
+                ? Level.OVERWORLD
+                : ResourceKey.create(Registries.DIMENSION, levelId);
         return new SanLocation(level, tag.getDouble("x"), tag.getDouble("y"), tag.getDouble("z"), tag.getFloat("yRot"), tag.getFloat("xRot"));
     }
 

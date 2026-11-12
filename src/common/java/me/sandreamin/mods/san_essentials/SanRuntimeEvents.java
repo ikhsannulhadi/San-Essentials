@@ -7,16 +7,19 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
- * Implements lifecycle and player event behavior shared by Fabric and NeoForge.
+ * Implements lifecycle and player event behavior shared by the loader entrypoints.
  */
 public final class SanRuntimeEvents {
     private static final Map<UUID, Integer> BACK_NOTICE_TICKS = new HashMap<>();
     private static final Map<UUID, Integer> FIRST_JOIN_NOTICE_TICKS = new HashMap<>();
+    private static final Set<UUID> FORCED_DAMAGE = new HashSet<>();
 
     private SanRuntimeEvents() {
     }
@@ -26,7 +29,16 @@ public final class SanRuntimeEvents {
     }
 
     public static boolean allowsPlayerDamage(ServerPlayer player) {
-        return !SanPlayerData.get(SanCompat.server(player)).isGodEnabled(player.getUUID());
+        return FORCED_DAMAGE.remove(player.getUUID())
+                || !SanPlayerData.get(SanCompat.server(player)).isGodEnabled(player.getUUID());
+    }
+
+    public static void allowNextDamage(ServerPlayer player) {
+        FORCED_DAMAGE.add(player.getUUID());
+    }
+
+    public static void clearForcedDamage(ServerPlayer player) {
+        FORCED_DAMAGE.remove(player.getUUID());
     }
 
     public static void onPlayerRespawn(ServerPlayer player) {
@@ -35,6 +47,12 @@ public final class SanRuntimeEvents {
             // Delay the message until the respawned player is ready to receive UI updates.
             BACK_NOTICE_TICKS.put(player.getUUID(), SanCompat.server(player).getTickCount() + 10);
         }
+    }
+
+    public static void onPlayerLogout(ServerPlayer player) {
+        SanCommands.forgetPlayer(player);
+        BACK_NOTICE_TICKS.remove(player.getUUID());
+        FIRST_JOIN_NOTICE_TICKS.remove(player.getUUID());
     }
 
     public static void onPlayerLogin(ServerPlayer player) {
@@ -58,6 +76,7 @@ public final class SanRuntimeEvents {
     public static void clearNoticeQueues() {
         BACK_NOTICE_TICKS.clear();
         FIRST_JOIN_NOTICE_TICKS.clear();
+        FORCED_DAMAGE.clear();
     }
 
     public static void onServerTick(MinecraftServer server) {

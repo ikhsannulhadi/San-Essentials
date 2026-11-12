@@ -2,32 +2,38 @@
 
 # San Essentials
 
-**Teleport, homes and everyday utility commands.**
+**Teleport, homes and everyday utility commands for NeoForge 1.21.1.**
 
 [![CurseForge](https://img.shields.io/badge/CurseForge-San%20Essentials-F16436?style=flat&logo=curseforge&logoColor=white)](https://www.curseforge.com/minecraft/mc-mods/sanessentials)
 [![Modrinth](https://img.shields.io/badge/Modrinth-San%20Essentials-00AF5C?style=flat&logo=modrinth&logoColor=white)](https://modrinth.com/mod/sanessentials)
 
 </div>
 
-San Essentials is a lightweight essentials mod for Fabric and NeoForge. It adds the commands players actually ask for — `/tpa`, `/home`, `/warp`, `/back`, `/fly`, `/heal`, `/repeat` — and lets you switch each of them on or off, set the permission level, and tune cooldowns and distances from a single TOML file.
+San Essentials is a lightweight essentials mod for **NeoForge 1.21.1**. It adds the commands players actually ask for — `/tpa`, `/home`, `/warp`, `/back`, `/fly`, `/heal`, `/repeat` — and lets you switch each of them on or off, set the permission level, and tune cooldowns and distances from a single TOML file.
+
+Starting with **2.0.0**, development is focused on NeoForge 1.21.1. Older Fabric and Minecraft 26.1.2 files remain available on CurseForge for legacy users.
 
 ## Features
 
-- **Server-side only.** Players don't need to install anything; install it on the client too if you want it in singleplayer.
-- **Every command is configurable.** Toggle commands, set permission levels, adjust RTP distance and cooldowns.
+- **Server-side friendly.** No client mod is required in multiplayer; installing it on the client is only needed for singleplayer.
+- **Every command is configurable.** Toggle commands, set permission levels, and tune RTP distances and cooldowns.
+- **Safe random teleport.** `/rtp` stays inside the active world border and only teleports to validated ground.
 - **Polished feedback.** Clickable accept/deny buttons, titles, sounds, and hover hints instead of plain chat text.
 - **Player picker menus.** `/tpa` and `/tpahere` without a target open a paginated chest menu of online players.
-- **Multilingual.** Messages follow the client's language, with a configurable `fallbackLanguage` (9 languages included).
+- **Warp menu.** `/warps` opens a paginated chest menu of every server warp.
+- **Protection** against creeper, enderman, and ravager block damage.
+- **TPA aliases.** `/tpaccept`, `/tpyes`, `/tpdeny`, and `/tpno` work alongside the native commands.
+- **Multilingual.** Messages follow the client's language, with a configurable `fallbackLanguage`.
 - **Persistent player data.** Homes, warps, back locations, fly and god mode survive restarts.
 - **Multiple named homes.** Each player can save several homes and pick one with `/home <name>`; the limit is configurable (`maxHomes`, 1-10, default 5).
-- **Light dependencies.** Fabric builds require Fabric API and nothing else.
 
 ## Supported Versions
 
-| Loader | Minecraft |
-| --- | --- |
-| Fabric | 1.21.1, 26.1.2 |
-| NeoForge | 1.21.1, 26.1.2 |
+| Loader | Minecraft | Java |
+| --- | --- | --- |
+| NeoForge | 1.21.1 | 21+ |
+
+Older Fabric and Minecraft 26.1.2 builds are legacy and no longer receive updates.
 
 ## Commands
 
@@ -38,12 +44,14 @@ San Essentials is a lightweight essentials mod for Fabric and NeoForge. It adds 
 | `/tpa [player]` | Request to teleport to another player, or open the player menu when omitted. |
 | `/tpaa` | Accept a pending TPA request. |
 | `/tpad` | Deny a pending TPA request. |
+| `/tpaccept`, `/tpyes` | Aliases for `/tpaa`. |
+| `/tpdeny`, `/tpno` | Aliases for `/tpad`. |
 | `/tpaauto` | Toggle automatic TPA acceptance. |
 | `/tpahere [player]` | Request another player to teleport to you, or open the player menu when omitted. |
 | `/tpaherea` | Accept a pending TPAhere request. |
 | `/tpahered` | Deny a pending TPAhere request. |
 | `/rtp` | Randomly teleport to a safe location inside the world border. |
-| `/spawn` | Teleport to world spawn. |
+| `/spawn` | Teleport to the overworld spawn. |
 | `/back` or `/dback` | Return to your last death location. |
 | `/tback` | Return to your previous teleport location. |
 
@@ -57,6 +65,7 @@ San Essentials is a lightweight essentials mod for Fabric and NeoForge. It adds 
 | `/delhome [name]` | Delete a named home, or the default home when the name is omitted. |
 | `/setwarp <name>` | Create a server warp. |
 | `/warp <name>` | Teleport to a server warp. |
+| `/warps` | Open a paginated menu of every server warp. |
 | `/delwarp <name>` | Delete a server warp. |
 
 Home names are lowercased and limited to letters, numbers and underscores (32 characters max). `/home` without a name falls back to listing your homes if the default one is missing, and tab-completion offers the homes you own.
@@ -66,7 +75,7 @@ Home names are lowercased and limited to letters, numbers and underscores (32 ch
 | Command | Description |
 | --- | --- |
 | `/trash` | Open a temporary trash inventory that clears on close. |
-| `/suicide` | Kill yourself. |
+| `/suicide` | Kill yourself. Works even while god mode is enabled. |
 | `/heal [player]` | Heal yourself or another player. |
 | `/fly [player]` | Toggle persistent flight for yourself or another player. |
 | `/god [player]` | Toggle god mode for yourself or another player. |
@@ -93,13 +102,32 @@ permissionLevel = 0
 
 `messagePrefixEnabled` controls the `[SE]` tag in front of mod messages; it is off by default.
 
-Unknown options left over from an older version are dropped on load and the original file is kept as a `.pre-config-migration.bak` backup.
+RTP options:
 
-Player data is stored inside the world folder — `data/san_essentials_player_data.dat` on Minecraft 1.21.1 and `data/san_essentials/player_data.dat` on 26.1.2. A schema upgrade writes a `.dat.bak` copy of the previous file before converting it, so an interrupted migration can always be rolled back by hand.
+```toml
+rtpCooldownSeconds = 30
+rtpMinDistance = 2000
+rtpMaxDistance = 5000
+rtpNetherMinDistance = 600
+rtpNetherMaxDistance = 1500
+rtpEndMinDistance = -1
+rtpEndMaxDistance = -1
+```
+
+`rtpEndMinDistance` and `rtpEndMaxDistance` control RTP in the End. Leave them at `-1` to reuse the overworld values.
+
+Existing values are preserved across updates; new options are added with their defaults. Unknown options left over from an older version are dropped on load and the original file is kept as a `.pre-config-migration.bak` backup.
+
+Player data is stored inside the world folder at `data/san_essentials_player_data.dat`. A schema upgrade writes a `.dat.bak` copy of the previous file before converting it.
 
 ## Installation
 
-Download the jar matching your loader and Minecraft version, then drop it into `mods`. Fabric builds also require Fabric API.
+1. Install NeoForge for Minecraft 1.21.1.
+2. Download the matching San Essentials jar.
+3. Drop it into the server's `mods` folder.
+4. Restart the server.
+
+No client mod is required for multiplayer.
 
 ## Building
 
@@ -109,18 +137,21 @@ Requires JDK 25.
 .\build-all-versions.ps1
 ```
 
-To build a single target:
+Or build directly:
 
 ```powershell
 .\gradlew.bat buildNeoForge --no-daemon --no-configuration-cache
-.\gradlew.bat buildFabric "-Ptarget_minecraft_version=26.1.2" --no-daemon --no-configuration-cache
 ```
 
-Jars land in `build/libs/` as `san_essentials-<loader>-<minecraft>-<version>.jar`.
+Jars land in `build/libs/` as:
 
-## Upgrading From PPE Essentials
+```text
+san_essentials-neoforge-1.21.1-2.0.0.jar
+```
 
-San Essentials runs under the new `san_essentials` mod id, so it does **not** read the old `ppe_essentials` config or the stored player data (homes, warps, back, fly, god). Expect a clean slate: re-copy your settings into `config/san_essentials-common.toml` and let players set their homes again, or run both mods once and move data by hand.
+## Legacy Versions
+
+Fabric and Minecraft 26.1.2 builds were published before 2.0.0 and are no longer updated. They remain available on CurseForge for users who still need them.
 
 ## Credits & License
 
