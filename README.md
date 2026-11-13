@@ -20,9 +20,12 @@ Starting with **2.0.0**, development is focused on NeoForge 1.21.1. Older Fabric
 - **Safe random teleport.** `/rtp` stays inside the active world border and only teleports to validated ground on the surface.
 - **Polished feedback.** Clickable accept/deny buttons, titles, sounds, and hover hints instead of plain chat text.
 - **Player picker menus.** `/tpa` and `/tpahere` without a target open a paginated chest menu of online players.
-- **Warp menu.** `/warps` opens a paginated chest menu of every server warp.
+- **Home and warp menus.** `/homes` and `/warps` open paginated chest menus for quick teleporting.
 - **Protection** against creeper, enderman, and ravager block damage.
 - **TPA aliases.** `/tpaccept`, `/tpyes`, `/tpdeny`, and `/tpno` work alongside the native commands.
+- **TPA ignore list.** `/tpignore <player>` blocks teleport requests from specific players.
+- **TPA request cooldown.** Configurable delay between outgoing teleport requests.
+- **Admin utilities.** `/feed` and `/repair` are available to operators by default.
 - **Multilingual.** Messages follow the client's language, with a configurable `fallbackLanguage`.
 - **Persistent player data.** Homes, warps, back locations, fly and god mode survive restarts.
 - **Multiple named homes.** Each player can save several homes and pick one with `/home <name>`; the limit is configurable (`maxHomes`, 1-10, default 5).
@@ -61,7 +64,8 @@ Older Fabric and Minecraft 26.1.2 builds are legacy and no longer receive update
 | --- | --- |
 | `/sethome [name]` | Set a home. Omitting the name sets the default home used by `/home`. |
 | `/home [name]` | Teleport to a named home, or the default home when the name is omitted. |
-| `/homes` | List your saved homes and how many slots you are using. |
+| `/homes` | Open a chest menu of your saved homes. |
+| `/homes list` | Show your saved homes and how many slots you are using in chat. |
 | `/delhome [name]` | Delete a named home, or the default home when the name is omitted. |
 | `/setwarp <name>` | Create a server warp. |
 | `/warp <name>` | Teleport to a server warp. |
@@ -76,13 +80,19 @@ Home names are lowercased and limited to letters, numbers and underscores (32 ch
 | --- | --- |
 | `/trash` | Open a temporary trash inventory that clears on close. |
 | `/suicide` | Kill yourself. Works even while god mode is enabled. |
+| `/tpignore [player]` | Toggle ignoring teleport requests from a player, or list ignored players when no player is given. |
+| `/tpignore clear` | Clear your ignored player list. |
 | `/heal [player]` | Heal yourself or another player. |
+| `/feed [player]` | Restore food and saturation. Operator only by default. |
+| `/repair [player]` | Repair the item in the main hand. Operator only by default. |
 | `/fly [player]` | Toggle persistent flight for yourself or another player. |
 | `/god [player]` | Toggle god mode for yourself or another player. |
 | `/repeat <times> [command]` | Repeat your last command or a specified command. |
 | `/san-ess help` | Show the command list. Disabled or unavailable commands are shown in red. |
 | `/san-ess reset all` | Clear all player data. |
 | `/san-ess reset notice` | Clear notice trigger data. |
+
+`/feed` and `/repair` use permission level 4 by default, so only operators can use them. Server owners can lower the permission level in the config if they want to allow other ranks.
 
 ## Configuration
 
@@ -93,6 +103,7 @@ messagePrefixEnabled = false
 preventCreeperBlockDamage = true
 maxHomes = 5
 teleportRequestTimeoutSeconds = 60
+tpaRequestCooldownSeconds = 5
 fallbackLanguage = "en_us"
 
 [commands.tpa]
@@ -134,7 +145,7 @@ No client mod is required for multiplayer.
 Requires JDK 25.
 
 ```powershell
-.\build-all-versions.ps1
+.\run-build.ps1
 ```
 
 Or build directly:

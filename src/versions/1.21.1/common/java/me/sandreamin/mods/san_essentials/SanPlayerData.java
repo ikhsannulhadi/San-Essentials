@@ -45,6 +45,7 @@ public class SanPlayerData extends SanPlayerDataStore {
         data.readLocationMap(tag.getList("deathBacks", Tag.TAG_COMPOUND), data.deathBacks);
         data.readLocationMap(tag.getList("teleportBacks", Tag.TAG_COMPOUND), data.teleportBacks);
         data.readNamedLocationMap(tag.getList("warps", Tag.TAG_COMPOUND), data.warps);
+        data.readIgnoreMap(tag.getList("tpIgnores", Tag.TAG_COMPOUND), data.tpIgnores);
 
         data.readUuidSet(tag.getList("tpaAuto", Tag.TAG_COMPOUND), data.tpaAuto);
         data.readUuidSet(tag.getList("fly", Tag.TAG_COMPOUND), data.fly);
@@ -64,6 +65,7 @@ public class SanPlayerData extends SanPlayerDataStore {
         tag.put("deathBacks", writeLocationMap(deathBacks));
         tag.put("teleportBacks", writeLocationMap(teleportBacks));
         tag.put("warps", writeNamedLocationMap(warps));
+        tag.put("tpIgnores", writeIgnoreMap(tpIgnores));
 
         tag.put("tpaAuto", writeUuidSet(tpaAuto));
         tag.put("fly", writeUuidSet(fly));
@@ -138,6 +140,37 @@ public class SanPlayerData extends SanPlayerDataStore {
             entry.putString("name", item.getKey());
             entry.put("location", item.getValue().save());
             list.add(entry);
+        }
+        return list;
+    }
+
+    private void readIgnoreMap(ListTag list, Map<UUID, Map<UUID, String>> target) {
+        for (int i = 0; i < list.size(); i++) {
+            CompoundTag entry = list.getCompound(i);
+            UUID owner = entry.getUUID("uuid");
+            UUID ignored = entry.getUUID("target");
+            if (owner == null || ignored == null) {
+                continue;
+            }
+
+            String name = entry.getString("name");
+            if (name.isEmpty()) {
+                name = ignored.toString();
+            }
+            target.computeIfAbsent(owner, key -> new HashMap<>()).put(ignored, name);
+        }
+    }
+
+    private ListTag writeIgnoreMap(Map<UUID, Map<UUID, String>> source) {
+        ListTag list = new ListTag();
+        for (Map.Entry<UUID, Map<UUID, String>> owner : source.entrySet()) {
+            for (Map.Entry<UUID, String> ignored : owner.getValue().entrySet()) {
+                CompoundTag entry = new CompoundTag();
+                entry.putUUID("uuid", owner.getKey());
+                entry.putUUID("target", ignored.getKey());
+                entry.putString("name", ignored.getValue());
+                list.add(entry);
+            }
         }
         return list;
     }

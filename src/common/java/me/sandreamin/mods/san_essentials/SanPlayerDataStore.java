@@ -19,6 +19,7 @@ public abstract class SanPlayerDataStore extends SavedData {
     protected final Map<UUID, SanLocation> deathBacks = new HashMap<>();
     protected final Map<UUID, SanLocation> teleportBacks = new HashMap<>();
     protected final Map<String, SanLocation> warps = new HashMap<>();
+    protected final Map<UUID, Map<UUID, String>> tpIgnores = new HashMap<>();
     protected final Set<UUID> tpaAuto = new HashSet<>();
     protected final Set<UUID> fly = new HashSet<>();
     protected final Set<UUID> god = new HashSet<>();
@@ -144,10 +145,42 @@ public abstract class SanPlayerDataStore extends SavedData {
         return removed;
     }
 
+    public boolean isTpIgnored(UUID owner, UUID target) {
+        Map<UUID, String> ignored = tpIgnores.get(owner);
+        return ignored != null && ignored.containsKey(target);
+    }
+
+    public boolean toggleTpIgnore(UUID owner, UUID target, String targetName) {
+        Map<UUID, String> ignored = tpIgnores.computeIfAbsent(owner, key -> new HashMap<>());
+        boolean nowIgnored;
+        if (ignored.remove(target) != null) {
+            nowIgnored = false;
+            if (ignored.isEmpty()) {
+                tpIgnores.remove(owner);
+            }
+        } else {
+            ignored.put(target, targetName);
+            nowIgnored = true;
+        }
+        setDirty();
+        return nowIgnored;
+    }
+
+    public Map<UUID, String> ignoredPlayers(UUID owner) {
+        return Map.copyOf(tpIgnores.getOrDefault(owner, Map.of()));
+    }
+
+    public void clearTpIgnores(UUID owner) {
+        if (tpIgnores.remove(owner) != null) {
+            setDirty();
+        }
+    }
+
     public void clearPlayerData() {
         homes.clear();
         deathBacks.clear();
         teleportBacks.clear();
+        tpIgnores.clear();
         tpaAuto.clear();
         fly.clear();
         god.clear();

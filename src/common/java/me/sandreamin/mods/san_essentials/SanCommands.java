@@ -25,6 +25,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.food.FoodData;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.MenuProvider;
@@ -35,6 +36,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.border.WorldBorder;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -59,6 +61,7 @@ public final class SanCommands {
     private static final int RTP_NETHER_MAX_Y = 126;
     private static final int RTP_SURFACE_SCAN_DEPTH = 8;
     private static final Map<UUID, Integer> RTP_COOLDOWNS = new HashMap<>();
+    private static final Map<UUID, Integer> TPA_REQUEST_COOLDOWNS = new HashMap<>();
     private static final Map<UUID, String> LAST_COMMANDS = new HashMap<>();
     private static final List<PendingSound> PENDING_SOUNDS = new ArrayList<>();
 
@@ -93,6 +96,18 @@ public final class SanCommands {
             registerTpaAlias(dispatcher, "tpyes", true);
             registerTpaAlias(dispatcher, "tpdeny", false);
             registerTpaAlias(dispatcher, "tpno", false);
+        }
+        if (enabled("tpignore")) {
+            dispatcher.register(Commands.literal("tpignore")
+                    .requires(source -> canUse(source, "tpignore"))
+                    .executes(context -> listIgnored(context.getSource().getPlayerOrException()))
+                    .then(Commands.literal("clear")
+                            .executes(context -> clearIgnored(context.getSource().getPlayerOrException())))
+                    .then(Commands.argument("player", EntityArgument.player())
+                            .executes(context -> toggleIgnored(
+                                    context.getSource().getPlayerOrException(),
+                                    EntityArgument.getPlayer(context, "player")
+                            ))));
         }
 
         if (enabled("tpahere")) {
@@ -174,7 +189,9 @@ public final class SanCommands {
         if (enabled("homes")) {
             dispatcher.register(Commands.literal("homes")
                     .requires(source -> canUse(source, "homes"))
-                    .executes(context -> homes(context.getSource().getPlayerOrException())));
+                    .executes(context -> openHomeMenu(context.getSource().getPlayerOrException()))
+                    .then(Commands.literal("list")
+                            .executes(context -> listHomes(context.getSource().getPlayerOrException()))));
         }
         if (enabled("suicide")) {
             dispatcher.register(Commands.literal("suicide")
@@ -249,6 +266,20 @@ public final class SanCommands {
                     .then(Commands.argument("player", EntityArgument.player())
                             .executes(context -> heal(context.getSource().getPlayerOrException(), EntityArgument.getPlayer(context, "player")))));
         }
+        if (enabled("feed")) {
+            dispatcher.register(Commands.literal("feed")
+                    .requires(source -> canUse(source, "feed"))
+                    .executes(context -> feed(context.getSource().getPlayerOrException(), context.getSource().getPlayerOrException()))
+                    .then(Commands.argument("player", EntityArgument.player())
+                            .executes(context -> feed(context.getSource().getPlayerOrException(), EntityArgument.getPlayer(context, "player")))));
+        }
+        if (enabled("repair")) {
+            dispatcher.register(Commands.literal("repair")
+                    .requires(source -> canUse(source, "repair"))
+                    .executes(context -> repair(context.getSource().getPlayerOrException(), context.getSource().getPlayerOrException()))
+                    .then(Commands.argument("player", EntityArgument.player())
+                            .executes(context -> repair(context.getSource().getPlayerOrException(), EntityArgument.getPlayer(context, "player")))));
+        }
         if (enabled("fly")) {
             dispatcher.register(Commands.literal("fly")
                     .requires(source -> canUse(source, "fly"))
@@ -271,6 +302,7 @@ public final class SanCommands {
             expireRequests(server, tick, type);
         }
         RTP_COOLDOWNS.entrySet().removeIf(entry -> entry.getValue() <= tick);
+        TPA_REQUEST_COOLDOWNS.entrySet().removeIf(entry -> entry.getValue() <= tick);
         playPendingSounds(server, tick);
         if (tick % 20 == 0) {
             keepFlyEnabled(server);
@@ -312,6 +344,7 @@ public final class SanCommands {
             type.requests().clear();
         }
         RTP_COOLDOWNS.clear();
+        TPA_REQUEST_COOLDOWNS.clear();
         LAST_COMMANDS.clear();
         PENDING_SOUNDS.clear();
     }
@@ -392,6 +425,39 @@ public final class SanCommands {
         }
     }
 
+    private static int toggleIgnored(ServerPlayer owner, ServerPlayer target) {
+        if (owner.getUUID().equals(target.getUUID())) {
+            send(owner, "san_essentials.tpignore.self");
+            return 0;
+        }
+
+        boolean ignored = SanPlayerData.get(SanCompat.server(owner)).toggleTpIgnore(
+                owner.getUUID(), target.getUUID(), SanCompat.profileName(target)
+        );
+        send(owner, ignored ? "san_essentials.tpignore.added" : "san_essentials.tpignore.removed", target.getName());
+        return 1;
+    }
+
+    private static int listIgnored(ServerPlayer player) {
+        Map<UUID, String> ignored = SanPlayerData.get(SanCompat.server(player)).ignoredPlayers(player.getUUID());
+        if (ignored.isEmpty()) {
+            send(player, "san_essentials.tpignore.none");
+            return 0;
+        }
+
+        send(player, "san_essentials.tpignore.header", ignored.size());
+        ignored.values().stream()
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .forEach(name -> send(player, "san_essentials.tpignore.entry", name));
+        return 1;
+    }
+
+    private static int clearIgnored(ServerPlayer player) {
+        SanPlayerData.get(SanCompat.server(player)).clearTpIgnores(player.getUUID());
+        send(player, "san_essentials.tpignore.cleared");
+        return 1;
+    }
+
     private static int acceptTpahere(ServerPlayer target) {
         return respondToTeleportRequest(target, TeleportRequestType.TPAHERE, true);
     }
@@ -406,6 +472,19 @@ public final class SanCommands {
             return 0;
         }
 
+        int tick = SanCompat.server(sender).getTickCount();
+        int cooldownExpireTick = TPA_REQUEST_COOLDOWNS.getOrDefault(sender.getUUID(), 0);
+        if (cooldownExpireTick > tick) {
+            send(sender, "san_essentials.tpa.request.cooldown", ticksToSeconds(cooldownExpireTick - tick));
+            return 0;
+        }
+
+        if (SanPlayerData.get(SanCompat.server(sender)).isTpIgnored(target.getUUID(), sender.getUUID())) {
+            send(sender, "san_essentials.tpignore.sender_ignored", target.getName());
+            applyTpaRequestCooldown(sender, tick);
+            return 0;
+        }
+
         if (type == TeleportRequestType.TPA
                 && commandAvailable(target, "tpaauto")
                 && SanPlayerData.get(SanCompat.server(sender)).isTpaAuto(target.getUUID())) {
@@ -415,6 +494,7 @@ public final class SanCommands {
                     sender, "san_essentials.tpa.auto.sender", target.getName()
             );
             teleportSounds(target, sender);
+            applyTpaRequestCooldown(sender, tick);
             return 1;
         }
 
@@ -431,8 +511,9 @@ public final class SanCommands {
         int timeoutSeconds = SanConfig.teleportRequestTimeoutSeconds();
         type.requests().put(
                 target.getUUID(),
-                new PendingRequest(sender.getUUID(), SanCompat.server(sender).getTickCount() + secondsToTicks(timeoutSeconds))
+                new PendingRequest(sender.getUUID(), tick + secondsToTicks(timeoutSeconds))
         );
+        applyTpaRequestCooldown(sender, tick);
         send(target, type.key("request.target"), sender.getName());
         sendRaw(target, prefixedRequestButtons(target, type.acceptCommand(), type.denyCommand()));
         send(target, type.key("request.commands"));
@@ -441,6 +522,13 @@ public final class SanCommands {
             send(sender, type.key("request.sender"), target.getName(), timeoutSeconds);
         }
         return 1;
+    }
+
+    private static void applyTpaRequestCooldown(ServerPlayer player, int tick) {
+        int cooldownSeconds = SanConfig.tpaRequestCooldownSeconds();
+        if (cooldownSeconds > 0) {
+            TPA_REQUEST_COOLDOWNS.put(player.getUUID(), tick + secondsToTicks(cooldownSeconds));
+        }
     }
 
     private static int respondToTeleportRequest(ServerPlayer target, TeleportRequestType type, boolean accepted) {
@@ -738,7 +826,17 @@ public final class SanCommands {
         return 0;
     }
 
-    private static int homes(ServerPlayer player) {
+    private static int openHomeMenu(ServerPlayer player) {
+        if (SanPlayerData.get(SanCompat.server(player)).homeNames(player.getUUID()).isEmpty()) {
+            send(player, "san_essentials.homes.none");
+            return 0;
+        }
+
+        SanCompat.openHomeMenu(player, 0);
+        return 1;
+    }
+
+    private static int listHomes(ServerPlayer player) {
         SanPlayerData data = SanPlayerData.get(SanCompat.server(player));
         if (data.homeNames(player.getUUID()).isEmpty()) {
             send(player, "san_essentials.homes.none");
@@ -747,6 +845,10 @@ public final class SanCommands {
 
         sendHomes(player, data, null);
         return 1;
+    }
+
+    static boolean requestHomeFromMenu(ServerPlayer player, String name) {
+        return home(player, name) > 0;
     }
 
     private static void sendHomes(ServerPlayer player, SanPlayerData data, String missingHome) {
@@ -856,7 +958,7 @@ public final class SanCommands {
         CommandSourceStack source = player.createCommandSourceStack();
         sendHelpLine(player, source, "san_essentials.help.teleport",
                 helpCommand("tpa"), helpCommand("tpahere"), helpCommand("tpaa"), helpCommand("tpad"), helpCommand("tpaauto"),
-                helpCommand("tpaherea"), helpCommand("tpahered"),
+                helpCommand("tpaherea"), helpCommand("tpahered"), helpCommand("tpignore"),
                 helpCommand("back"), helpCommand("dback"), helpCommand("tback"), helpCommand("spawn"), helpCommand("rtp"));
         sendHelpLine(player, source, "san_essentials.help.home",
                 helpCommand("home"), helpCommand("homes"), helpCommand("sethome"), helpCommand("delhome"),
@@ -864,8 +966,9 @@ public final class SanCommands {
         sendHelpLine(player, source, "san_essentials.help.utility",
                 helpCommand("suicide"), helpCommand("trash"));
         sendHelpLine(player, source, "san_essentials.help.op",
-                helpCommand("setwarp"), helpCommand("delwarp"), helpCommand("heal"), helpCommand("fly"), helpCommand("god"),
-                helpCommand("repeat"), new HelpCommand("san-ess-reset", "/san-ess reset"));
+                helpCommand("setwarp"), helpCommand("delwarp"), helpCommand("heal"), helpCommand("feed"), helpCommand("repair"),
+                helpCommand("fly"), helpCommand("god"), helpCommand("repeat"),
+                new HelpCommand("san-ess-reset", "/san-ess reset"));
         return 1;
     }
 
@@ -934,6 +1037,33 @@ public final class SanCommands {
         send(sender, "san_essentials.heal.success", target.getName());
         if (sender != target) {
             send(target, "san_essentials.heal.target", sender.getName());
+        }
+        return 1;
+    }
+
+    private static int feed(ServerPlayer sender, ServerPlayer target) {
+        FoodData food = target.getFoodData();
+        food.setFoodLevel(20);
+        food.setSaturation(20.0F);
+        send(sender, "san_essentials.feed.success", target.getName());
+        if (sender != target) {
+            send(target, "san_essentials.feed.target", sender.getName());
+        }
+        return 1;
+    }
+
+    private static int repair(ServerPlayer sender, ServerPlayer target) {
+        ItemStack held = target.getMainHandItem();
+        if (held.isEmpty() || !held.isDamageableItem() || !held.isDamaged()) {
+            send(sender, "san_essentials.repair.invalid", target.getName());
+            return 0;
+        }
+
+        held.setDamageValue(0);
+        target.setItemInHand(InteractionHand.MAIN_HAND, held);
+        send(sender, "san_essentials.repair.success", target.getName());
+        if (sender != target) {
+            send(target, "san_essentials.repair.target", sender.getName());
         }
         return 1;
     }

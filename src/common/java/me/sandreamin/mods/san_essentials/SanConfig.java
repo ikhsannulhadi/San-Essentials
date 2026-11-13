@@ -118,6 +118,13 @@ public final class SanConfig {
             true,
             " Whether players may send /tpa and /tpahere requests to themselves."
     );
+    private static final ValueDefinition TPA_REQUEST_COOLDOWN_SECONDS = intValue(
+            "tpaRequestCooldownSeconds",
+            5,
+            0,
+            86400,
+            " Cooldown in seconds between TPA and TPAhere requests. Use 0 to disable the cooldown."
+    );
 
     private static final List<ValueDefinition> VALUES = List.of(
             FALLBACK_LANGUAGE,
@@ -135,7 +142,8 @@ public final class SanConfig {
             RTP_END_MIN_DISTANCE,
             RTP_END_MAX_DISTANCE,
             TELEPORT_REQUEST_TIMEOUT_SECONDS,
-            ALLOW_SELF_TELEPORT_REQUESTS
+            ALLOW_SELF_TELEPORT_REQUESTS,
+            TPA_REQUEST_COOLDOWN_SECONDS
     );
     private static final Set<String> VALUE_KEYS = Set.copyOf(
             VALUES.stream().map(ValueDefinition::key).toList()
@@ -169,8 +177,11 @@ public final class SanConfig {
             command("warp", true, 0),
             command("setwarp", true, 4),
             command("delwarp", true, 4),
+            command("tpignore", true, 0),
             command("repeat", true, 4),
             command("heal", true, 4),
+            command("feed", true, 4),
+            command("repair", true, 4),
             command("fly", true, 4),
             command("god", true, 4)
     );
@@ -263,6 +274,10 @@ public final class SanConfig {
 
     public static boolean allowSelfTeleportRequests() {
         return SanConfigBackend.booleanValue(ALLOW_SELF_TELEPORT_REQUESTS);
+    }
+
+    public static int tpaRequestCooldownSeconds() {
+        return SanConfigBackend.intValue(TPA_REQUEST_COOLDOWN_SECONDS);
     }
 
     public static boolean commandEnabled(String command) {

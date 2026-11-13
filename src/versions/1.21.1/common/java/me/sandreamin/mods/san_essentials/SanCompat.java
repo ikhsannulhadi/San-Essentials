@@ -121,6 +121,10 @@ public final class SanCompat {
         SanWarpMenu.open(player, page);
     }
 
+    public static void openHomeMenu(ServerPlayer player, int page) {
+        SanHomeMenu.open(player, page);
+    }
+
     public static void setPlayerHeadProfile(ItemStack head, ServerPlayer player) {
         head.set(DataComponents.PROFILE, new ResolvableProfile(player.getGameProfile()));
     }
