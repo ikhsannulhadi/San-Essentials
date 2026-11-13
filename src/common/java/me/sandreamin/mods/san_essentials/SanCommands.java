@@ -570,6 +570,9 @@ public final class SanCommands {
         if (nether) {
             maxY = Math.min(maxY, RTP_NETHER_MAX_Y);
         } else {
+            // Load the target chunk first; Heightmap returns the minimum build height for
+            // chunks that are not loaded yet, which would make every RTP attempt fail.
+            level.getBlockState(new BlockPos(x, SanCompat.minBuildY(level), z));
             // Keep surface RTP on the surface instead of descending into caves.
             int surfaceY = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
             maxY = Math.min(maxY, surfaceY + 2);

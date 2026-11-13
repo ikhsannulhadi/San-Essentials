@@ -146,8 +146,10 @@ Or build directly:
 Jars land in `build/libs/` as:
 
 ```text
-san_essentials-neoforge-1.21.1-2.0.0.jar
+san_essentials-neoforge-<version>.jar
 ```
+
+The build script automatically increments the patch version when a jar with the same or a lower version already exists. For example, after `san_essentials-neoforge-2.0.1.jar` exists, the next build produces `san_essentials-neoforge-2.0.2.jar`. The new version is written back to `mod_version` in `gradle.properties` after a successful build.
 
 ## Legacy Versions
 

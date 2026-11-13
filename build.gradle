@@ -25,7 +25,7 @@ def runDirectory = { String name ->
 }
 
 base {
-    archivesName = "${effectiveModId}-neoforge-${effectiveMinecraftVersion}"
+    archivesName = "${effectiveModId}-neoforge"
 }
 
 java {

@@ -14,6 +14,7 @@ $ErrorActionPreference = 'Stop'
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $propertiesPath = Join-Path $scriptRoot 'gradle.properties'
 $versionsRoot = Join-Path $scriptRoot 'src\versions'
+$libsDir = Join-Path $scriptRoot 'build\libs'
 $isWindowsHost = $env:OS -eq 'Windows_NT'
 $gradleWrapper = Join-Path $scriptRoot ($(if ($isWindowsHost) { 'gradlew.bat' } else { 'gradlew' }))
 
@@ -42,6 +43,61 @@ function Read-GradleProperties {
     }
 
     return $properties
+}
+
+function Get-NextPatchVersion {
+    param([Parameter(Mandatory = $true)][version] $Version)
+
+    $build = if ($Version.Build -lt 0) { 0 } else { $Version.Build }
+    return New-Object System.Version -ArgumentList $Version.Major, $Version.Minor, ($build + 1)
+}
+
+function Get-HighestBuiltVersion {
+    param(
+        [Parameter(Mandatory = $true)][string] $Directory,
+        [Parameter(Mandatory = $true)][string] $Prefix
+    )
+
+    if (-not (Test-Path -LiteralPath $Directory)) {
+        return $null
+    }
+
+    $highest = $null
+    foreach ($jar in Get-ChildItem -LiteralPath $Directory -Filter "$Prefix-*.jar" -File) {
+        if ($jar.Name -match "^$([regex]::Escape($Prefix))-(?:.*-)?(\d+\.\d+\.\d+)\.jar$") {
+            $candidate = [version]$matches[1]
+            if ($null -eq $highest -or $candidate -gt $highest) {
+                $highest = $candidate
+            }
+        }
+    }
+
+    return $highest
+}
+
+function Set-GradleProperty {
+    param(
+        [Parameter(Mandatory = $true)][string] $Path,
+        [Parameter(Mandatory = $true)][string] $Key,
+        [Parameter(Mandatory = $true)][string] $Value
+    )
+
+    $lines = @(Get-Content -LiteralPath $Path)
+    $pattern = '^\s*' + [regex]::Escape($Key) + '\s*='
+    $updated = $false
+    for ($index = 0; $index -lt $lines.Count; $index++) {
+        if ($lines[$index] -match $pattern) {
+            $lines[$index] = "$Key=$Value"
+            $updated = $true
+            break
+        }
+    }
+
+    if (-not $updated) {
+        $lines += "$Key=$Value"
+    }
+
+    [System.IO.File]::WriteAllLines($Path, $lines, [System.Text.UTF8Encoding]::new($false))
 }
 
 function Add-Version {
@@ -94,12 +150,25 @@ if ($versions.Count -eq 0) {
     throw 'No Minecraft versions were found. Pass -MinecraftVersion or add versions to gradle.properties/src/versions.'
 }
 
+if (-not $properties.Contains('mod_version')) {
+    throw 'The mod_version property is required in gradle.properties.'
+}
+
+$currentVersion = [version]$properties['mod_version']
+$highestBuiltVersion = Get-HighestBuiltVersion -Directory $libsDir -Prefix "$modId-neoforge"
+if ($null -ne $highestBuiltVersion -and $highestBuiltVersion -ge $currentVersion) {
+    $targetVersion = Get-NextPatchVersion -Version $highestBuiltVersion
+} else {
+    $targetVersion = $currentVersion
+}
+
+Write-Host "==> Version: $currentVersion -> $targetVersion"
+
 $taskByLoader = @{
     neoforge = 'buildNeoForge'
 }
 $baseGradleArgs = @('--no-daemon', '--no-configuration-cache') + @($GradleArgs)
 $failures = New-Object System.Collections.Generic.List[object]
-$libsDir = Join-Path $scriptRoot 'build\libs'
 
 Push-Location $scriptRoot
 try {
@@ -111,21 +180,11 @@ try {
         }
     }
 
-    if (Test-Path -LiteralPath $libsDir) {
-        $previousJars = @(Get-ChildItem -LiteralPath $libsDir -Filter "$modId-*.jar" -File)
-        if ($previousJars.Count -gt 0) {
-            Write-Host "==> Removing $($previousJars.Count) previous mod jar(s)"
-            foreach ($jar in $previousJars) {
-                Remove-Item -LiteralPath $jar.FullName -Force
-            }
-        }
-    }
-
     foreach ($version in $versions) {
         foreach ($loaderName in $requestedLoaders) {
             $normalizedLoader = $loaderName.ToLowerInvariant()
             $taskName = $taskByLoader[$normalizedLoader]
-            $gradleCommandArgs = @("-Ptarget_minecraft_version=$version", $taskName) + $baseGradleArgs
+            $gradleCommandArgs = @("-Ptarget_minecraft_version=$version", "-Pmod_version=$targetVersion", $taskName) + $baseGradleArgs
 
             Write-Host "==> Building $normalizedLoader for Minecraft $version"
             & $gradleWrapper @gradleCommandArgs
@@ -157,6 +216,11 @@ if ($failures.Count -gt 0) {
         Write-Host " - $($failure.Loader) $($failure.MinecraftVersion): exit code $($failure.ExitCode)"
     }
     exit 1
+}
+
+if ($targetVersion -ne $currentVersion) {
+    Set-GradleProperty -Path $propertiesPath -Key 'mod_version' -Value $targetVersion.ToString()
+    Write-Host "==> Updated mod_version to $targetVersion"
 }
 
 Write-Host ''

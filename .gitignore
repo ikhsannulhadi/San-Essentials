@@ -5,7 +5,6 @@ build/
 
 # Minecraft run directories and generated runtime data
 runs/
-.eclipse
 
 # IntelliJ IDEA
 .idea/
@@ -46,7 +45,3 @@ desktop.ini
 # Docs
 docs/
 AGENTS.md
-.eclipse/configurations/Client.launch
-.eclipse/configurations/Data.launch
-.eclipse/configurations/GameTestServer.launch
-.eclipse/configurations/Server.launch
